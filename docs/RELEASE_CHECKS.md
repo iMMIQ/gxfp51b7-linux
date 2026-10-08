@@ -51,7 +51,7 @@ from an unavailable backend and binds the selected module, print and binaries
 to the stored commissioning evidence.
 
 Merged development branches `rust-refactor` and `chicago-validation` were
-removed locally and from GitHub. The cleanup branch is retained for review.
+removed locally and from GitHub. Completed review branches are removed after merge.
 The release inventory contains source, synthetic tests and documentation;
 biometric captures, guest disks, keys and vendor binaries remain private.
 
