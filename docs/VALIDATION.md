@@ -78,5 +78,8 @@ automatic daemon activation succeeded. An isolated standard `pam_fprintd`
 authentication and `pam_unix` account check returned `PAM_SUCCESS` (0). Its
 empty-sensor counterpart returned `PAM_AUTHINFO_UNAVAIL` (9). The service uses
 its normal filesystem hardening with explicit ACPI doorbell and loopback access.
-The previous SDDM configuration and daemon files are saved in private recovery
-storage. Full desktop session startup remains a separate user login check.
+The marked SDDM branch now uses the staged official `pam_fprintd` module.
+Authentication and account checks against the actual installed `sddm` PAM
+service returned `PAM_SUCCESS` (0) with a fresh enrolled-finger press. The previous
+SDDM configuration and daemon files are saved in private recovery storage.
+Full desktop session startup remains a separate user login check.
