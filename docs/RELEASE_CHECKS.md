@@ -1,64 +1,75 @@
-# Rust refactor checks — 2026-10-08
+# Quality and release checks — 2026-10-08
 
-The Rust workspace provides the host executable, enrollment/administrator
-commands, installer, VM lifecycle commands and PAM authentication library.
-The v3 matching policy and existing NPZ templates carry over to this version.
+## Toolchain and automated checks
 
-## Offline verification
+Version 0.3 pins Rust 1.99.0 with rustfmt and Clippy. The local build uses GCC 16
+for host/guest C and the running kernel's build system for the BIOS helper.
+Ruff 0.16.10 and clang-format 23.1.2 are pinned in the development requirements.
+CI runs the same `make check` and `make audit` targets on Ubuntu 24.04.
 
-- Cargo workspace builds in release mode with the committed lockfile. The
-  workspace also compiles with its minimum Rust version, 1.88.0.
-- Twelve Rust unit tests cover device framing, malformed inputs, decoder layout,
-  blank/invalid images, translation, affine bounds, template round trips,
-  PAM configuration and subprocess deadlines.
-- The 24 Python reference tests pass from `tests/reference`.
-- Seven synthetic cross-language tests compare decoding, Gaussian filtering,
-  quality statistics, affine samples/masks, translation, full 15-reference
-  matching, threshold decisions and NPZ interoperability.
-- A PAM ABI check covers six exported callbacks with null handles and invalid
-  argument counts; these calls return a PAM error.
-- Formatting, Clippy with warnings treated as errors, guest bootstrap syntax,
-  local documentation links and the release inventory check pass.
+The check target covers:
 
-One sequential synthetic 15-reference search took approximately 6.9 seconds in
-Python and 2.1 seconds in Rust on the validated laptop. Rust reuses probe spectra
-and the library's N-dimensional FFT processor. The timing describes that fixture
-and machine; it is separate from biometric accuracy evidence.
+- Locked release builds of the Rust workspace, libfprint TOD adapter and PAM/API
+  probes; C builds use `-Wall -Wextra -Werror`.
+- Ten Rust tests for device framing, decoding/quality, legacy background loading,
+  Chicago context/input checks, print bounds/version handling, administrator PAM
+  layout and subprocess deadlines.
+- Three GLib worker test groups exercising the actual adapter pipe reader with
+  valid results, malformed events, invalid event order, NUL bytes, bounded print
+  lengths, complete/truncated enrollment payloads, incomplete input and cancellation.
+- Seven pinned ChicagoHS test programs with 103 registered cases: 61 synthetic
+  cases pass and 42 optional private-oracle cases skip. Hashes cover all 29 pinned
+  upstream source files.
+- Eleven independent Python decoder/protocol tests and two Rust/Python parity
+  cases for decoding and quality statistics.
+- Rust/C/Python formatting, strict Clippy, Ruff, unused direct dependencies,
+  Rust documentation with warnings treated as errors, Python compilation,
+  guest bootstrap syntax and the public release inventory.
 
-## Hardware and template continuity
+Local platform checks additionally compile the BIOS helper against host kernel
+`7.2.9-arch1-1` and the guest loader against legacy SGX 2.11.0 headers. Clang's
+static analyzer reports zero warnings for the first-party TOD adapter.
+`make audit` reports zero known vulnerabilities and zero warnings against RustSec.
+All listed local checks passed; the public release inventory contains 107 text
+files and passes its private/binary-content checks.
 
-The Rust backend completed an encrypted live capture in approximately 1.9 seconds,
-passed the original component's integrity checks and decoded 5120 pixels.
-The pinned guest readiness check passed. An isolated Rust PAM check rejected an
-empty sensor within the configured deadline.
-The Rust executable also accepted a fresh enrolled-finger capture at `0.861181`
-with the existing `0.86` threshold. An enrolled-finger Rust PAM check remains
-the next live qualification step before activating the replacement library.
+## Code and dependency cleanup
 
-The final Rust matcher was exercised against the existing private template and
-all 12 independent v3 captures. All six enrolled-finger captures were accepted;
-all six different-finger captures were rejected. Its maximum score difference
-from the frozen Python results was `4.44e-16`. Mean offline Rust scoring time for
-those captures was approximately 2.2 seconds.
+The workspace has three packages: core decoding/quality, the Chicago wrapper and
+the host driver. The removed affine matcher, RootSIFT comparator, custom PAM
+crate and research CLI are preserved in Git history. Resolved Cargo packages
+fell from 158 to 91, including the three workspace packages. OpenCV, FFT,
+affine interpolation/filtering and custom PAM dependencies were removed.
+`cargo machete` reports zero unused direct dependencies.
 
-The quantitative sample scope is documented in [VALIDATION.md](VALIDATION.md).
-Generalized fresh-install enrollment and full desktop session startup are
-separate deployment qualification steps. Public source contains synthetic
-fixtures and aggregate results; local biometric and guest assets remain private.
+Application-private exports use crate visibility. Unsafe operations require
+explicit blocks and safety comments. Worker input rejects NUL bytes and bounds
+lines/print data. Subprocess deadline handling terminates the process group
+while its leader remains unreaped, preserving the leader's identity through
+cleanup. Standard PAM qualification distinguishes authentication rejection
+from an unavailable backend and binds the selected module, print and binaries
+to the stored commissioning evidence.
 
-## ChicagoHS and fprintd checks
+Merged development branches `rust-refactor` and `chicago-validation` were
+removed locally and from GitHub. The cleanup branch is retained for review.
+The release inventory contains source, synthetic tests and documentation;
+biometric captures, guest disks, keys and vendor binaries remain private.
 
-The extended workspace compiles with Rust 1.88.0. Its 15 Rust tests include native
-context ownership/input rejection, blank RootSIFT evidence and truncated,
-oversized or unsupported private print frames. The pinned ChicagoHS native suite
-has 103 registered cases across seven programs: 61 synthetic cases pass and
-42 optional private-oracle cases are skipped. Source hashes match 29 files from
-the recorded upstream revision. The libfprint adapter and API probe compile with
-`-Wall -Wextra -Werror`.
+## Quality assessment and remaining qualification
 
-Live checks completed a new 12-stage fprintd enrollment, same-finger acceptance,
-different-finger rejection, empty-sensor timeout and cancellation with worker
-cleanup. Persistent D-Bus activation and isolated standard PAM authentication
-and account checks passed. Authentication and account checks against the actual
-SDDM configuration also returned `PAM_SUCCESS` (0). [Validation](VALIDATION.md) records the dataset and
-limits of the measured comparison.
+The active code has one authentication path, reproducible tooling and a shared
+local/CI quality gate. Source consolidation removes parallel matcher policies,
+duplicate Python administration and stale runtime artifacts. Kernel, guest and
+vendor algorithm boundaries remain explicit and documented.
+
+The strongest remaining limits concern deployment and biometric evidence. The
+live ChicagoHS evidence covers one machine and one participant, and the 42
+private-oracle native cases require external fixtures. The revised v0.3 fresh
+installation, calibration and commissioning sequence needs a complete hardware
+run before deployment. Its offline tests establish parser/format compatibility
+and software behavior. The hardware-qualified v0.2 installation continues to
+provide the current login path during this source cleanup.
+
+[VALIDATION.md](VALIDATION.md) records the measured comparison, live fprintd/PAM
+results and the scope of the biometric evidence. General false-accept rates,
+spoof resistance and full desktop session startup require their own checks.

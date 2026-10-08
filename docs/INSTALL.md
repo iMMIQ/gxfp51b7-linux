@@ -4,9 +4,9 @@ This is an administrator/researcher workflow for the validated MACHC-WAX9 config
 
 ## 1. Host prerequisites
 
-The tested host uses Arch/EndeavourOS with systemd, SDDM and the `system-login` PAM layout. Install Rust 1.88 or newer, a C toolchain, PAM headers, kernel headers matching the running kernel, DKMS, `acpi_call`, QEMU with SGX/KVM support and OpenSSH. The isolated VM needs `/dev/kvm`, `/dev/sgx_vepc`, 48 MiB free EPC, approximately 1.5 GiB RAM and the `kvm`/`sgx` groups. BIOS SGX must be enabled.
+The tested host uses Arch/EndeavourOS with systemd, SDDM and the `system-login` PAM layout. Install Rust 1.99.0, a C toolchain, PAM and libfprint TOD development headers, GLib/GIO, pkg-config, official fprintd, kernel headers matching the running kernel, DKMS, `acpi_call`, QEMU with SGX/KVM support and OpenSSH. The isolated VM needs `/dev/kvm`, `/dev/sgx_vepc`, 48 MiB free EPC, approximately 1.5 GiB RAM and the `kvm`/`sgx` groups. BIOS SGX must be enabled.
 
-The host runtime is the compiled `gxfp51b7` executable and Rust PAM library. Python, NumPy, SciPy, pefile and cryptography support offline preparation and regression checks; install them with `requirements-tools.txt` in a development environment.
+The host runtime is the compiled Rust executable and libfprint TOD adapter. Standard fprintd and pam_fprintd provide authentication. Python, NumPy, pefile and cryptography support offline checks and asset preparation; Ruff and clang-format supply formatting/lint checks. Install `requirements-tools.txt` and `cargo-machete` in the development environment.
 
 Run the offline checks first:
 
@@ -105,18 +105,31 @@ sudo build/gxfp51b7 install \
 sudo systemctl enable --now gxfp51b7-vm.service
 ```
 
-The Rust installer targets a fresh deployment using the tested Arch paths. It copies reviewed binaries into root-owned directories, creates the dedicated `gxfpvm` service account and installs a separate PAM test service. SDDM enablement is a later step after live validation. Existing version 0.1 deployments follow the [Rust migration guide](MIGRATING.md). Installation writes files in stages; if a preparation error interrupts it, inspect and remove the newly installed project files before retrying.
+The Rust installer targets a fresh deployment using the tested Arch paths. It copies reviewed binaries into root-owned directories, creates the dedicated `gxfpvm` service account and installs a separate PAM test service. SDDM enablement is a later step after live validation. Existing deployments follow the [migration guide](MIGRATING.md). Installation writes files in stages; if a preparation error interrupts it, inspect and remove the newly installed project files before retrying.
 
 ## 5. Enroll and validate
 
 ```sh
-sudo /usr/local/lib/gxfp51b7/gxfp51b7 enroll --user YOUR_ACCOUNT
+sudo /usr/local/lib/gxfp51b7/gxfp51b7 calibrate --user YOUR_ACCOUNT
+sudo systemctl restart fprintd.service
+fprintd-enroll -f right-index-finger YOUR_ACCOUNT
 sudo /usr/local/lib/gxfp51b7/gxfp51b7 check
 ```
 
-Enrollment captures an empty background and 15 separate presses of the same index finger. Lift the finger fully between presses and vary position slightly. Enrollment processes captures in memory and stores the processed template with root-private access. Templates use compatible `uint16` background and `float64` images in NPZ format. Changing an enrollment requires disabling SDDM fingerprint login first.
+Calibration captures an empty-sensor background into root-private `background.json`
+and binds the local account. fprintd enrollment captures a fresh background and
+12 accepted positions of the same finger. Keep contact through each capture,
+lift fully when prompted, and vary contact position. fprintd stores the completed
+print under `/var/lib/fprint`. Calibration takes place before enabling SDDM.
 
-The live check asks for an empty sensor, the enrolled finger and three different fingers. It records expected outcomes privately and binds that report to the runtime, PAM module and template digests. Errors or unexpected acceptances stop the sequence. These checks provide local commissioning evidence. Population security evaluation requires a broader participant and attempt set. Collect independent repetitions before routine use.
+The live check asks for an empty sensor, the enrolled finger and three different
+fingers. It checks standard PAM authentication and account results, and binds
+its private report to the helper, adapter, PAM module, probes, background and
+enrolled print digests. Expected PAM codes are 9 for an empty sensor, 0 for a
+matching finger and 11 (`PAM_MAXTRIES`, one mismatch) for a different finger. Backend errors during a
+specified different-finger control stop qualification. The isolated test
+service uses the standard module and normal account checks; SDDM supplies
+its own faillock integration after enablement.
 
 ## 6. Enable and test SDDM
 
@@ -137,8 +150,8 @@ To disable the fingerprint branch:
 sudo /usr/local/lib/gxfp51b7/gxfp51b7 disable
 ```
 
-It removes only the marked SDDM block, disables the fingerprint configuration and stops/disables the VM. Other PAM edits and the password path remain. The original file is stored at `/var/lib/gxfp51b7/backups/sddm-before-fingerprint`. To re-enable after disablement, start the VM again, enroll, rerun live checks, then enable.
+It removes only the marked SDDM block, disables the fingerprint configuration and stops/disables the VM. Other PAM edits and the password path remain. The original file is stored at `/var/lib/gxfp51b7/backups/sddm-before-fingerprint`. To re-enable after disablement, start the VM again, calibrate, enroll with fprintd, rerun live checks, then enable.
 
-For helper startup failures, use a root recovery console to inspect `/etc/pam.d/sddm` and remove only the `BEGIN GXFP51B7 fingerprint login` through `END GXFP51B7 fingerprint login` block. Preserve the rest of the file. After removing the block, stop the VM service. Remove the SDDM block before deleting the PAM module.
+For helper startup failures, use a root recovery console to inspect `/etc/pam.d/sddm` and remove only the `BEGIN GXFP51B7 fingerprint login` through `END GXFP51B7 fingerprint login` block. Preserve the rest of the file. After removing the block, stop the VM service. Remove the SDDM block before removing project authentication files.
 
-For complete removal after disablement, remove the project's runtime/service, PAM module/test-service files and the two project state directories. Removing `/var/lib/gxfp51b7` erases the enrollment template; removing `/var/lib/gxfp51b7-vm` erases the guest. Complete project removal by removing its DKMS helper and modules-load entries. Keep shared packages, groups and `acpi_call` available for software that uses them.
+For complete removal after disablement, remove the project's runtime/service, adapter/test-service/drop-in files and the two project state directories. Removing `/var/lib/gxfp51b7` erases calibration and commissioning data; use `fprintd-delete` for enrollment removal. Removing `/var/lib/gxfp51b7-vm` erases the guest. Complete project removal by removing its DKMS helper and modules-load entries. Keep shared packages, groups and `acpi_call` available for software that uses them.

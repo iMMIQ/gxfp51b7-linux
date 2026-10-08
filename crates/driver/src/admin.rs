@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 use super::security::{self, Config, ROOT, STATE};
 use anyhow::{Result, ensure};
-use gxfp_core::{image, template::Template};
-use ndarray::{Array1, Array3, s};
+use gxfp_core::image;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
@@ -16,7 +15,7 @@ use std::{
 
 const BEGIN: &str = "# BEGIN GXFP51B7 fingerprint login\n";
 const END: &str = "# END GXFP51B7 fingerprint login\n";
-pub fn valid_user(user: &str) -> bool {
+pub(crate) fn valid_user(user: &str) -> bool {
     !user.is_empty()
         && user != "root"
         && user.bytes().enumerate().all(|(i, b)| {
@@ -26,7 +25,12 @@ pub fn valid_user(user: &str) -> bool {
                     && (b.is_ascii_digit() || b == b'-' || (b == b'$' && i + 1 == user.len())))
         })
 }
-pub fn enable_text(text: &str, user: &str) -> Result<String> {
+pub(crate) fn enable_text(text: &str, user: &str, module: &Path) -> Result<String> {
+    ensure!(
+        module == Path::new("/usr/lib/security/pam_fprintd.so")
+            || module == Path::new(ROOT).join("pam_fprintd.so"),
+        "Standard PAM module required"
+    );
     ensure!(valid_user(user), "Expected a regular local account name");
     ensure!(
         !text.contains(BEGIN) && !text.contains(END),
@@ -49,7 +53,8 @@ pub fn enable_text(text: &str, user: &str) -> Result<String> {
         "Expected Arch system-login layout"
     );
     let block = format!(
-        "{BEGIN}auth required pam_shells.so\nauth requisite pam_nologin.so\nauth required pam_env.so\nauth requisite pam_faillock.so preauth\nauth [success=ok default=1] pam_gxfp51b7.so user={user}\nauth sufficient pam_faillock.so authsucc\n{END}"
+        "{BEGIN}auth required pam_shells.so\nauth requisite pam_nologin.so\nauth required pam_env.so\nauth requisite pam_faillock.so preauth\nauth [success=ok default=1] {} max-tries=1 timeout=20\nauth sufficient pam_faillock.so authsucc\n{END}",
+        module.display()
     );
     let index = text
         .lines()
@@ -58,7 +63,7 @@ pub fn enable_text(text: &str, user: &str) -> Result<String> {
         .sum::<usize>();
     Ok(format!("{}{}{}", &text[..index], block, &text[index..]))
 }
-pub fn disable_text(text: &str) -> Result<String> {
+pub(crate) fn disable_text(text: &str) -> Result<String> {
     if !text.contains(BEGIN) && !text.contains(END) {
         return Ok(text.to_owned());
     }
@@ -71,7 +76,7 @@ pub fn disable_text(text: &str) -> Result<String> {
     ensure!(stop > start, "Invalid block order");
     Ok(format!("{}{}", &text[..start], &text[stop + END.len()..]))
 }
-pub fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
+pub(crate) fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
     let parent = path
         .parent()
         .ok_or_else(|| anyhow::anyhow!("Missing parent"))?;
@@ -86,7 +91,7 @@ pub fn atomic_write(path: &Path, data: &[u8], mode: u32) -> Result<()> {
     fs::File::open(parent)?.sync_all()?;
     Ok(())
 }
-pub fn save(name: &str, value: &impl serde::Serialize) -> Result<()> {
+pub(crate) fn save(name: &str, value: &impl serde::Serialize) -> Result<()> {
     let mut data = serde_json::to_vec_pretty(value)?;
     data.push(b'\n');
     atomic_write(&Path::new(STATE).join(name), &data, 0o600)
@@ -129,17 +134,71 @@ fn remove_report() -> Result<()> {
     }
     Ok(())
 }
+pub(crate) fn pam_module() -> Result<std::path::PathBuf> {
+    let local = Path::new(ROOT).join("pam_fprintd.so");
+    let path = if local.exists() {
+        local
+    } else {
+        Path::new("/usr/lib/security/pam_fprintd.so").to_owned()
+    };
+    security::trusted(&path)?;
+    Ok(path)
+}
+pub(crate) fn test_service(module: &Path) -> String {
+    format!(
+        "auth required {} max-tries=1 timeout=20\naccount include system-login\n",
+        module.display()
+    )
+}
 fn fingerprint() -> Result<String> {
-    let mut hash = Sha256::new();
-    for path in [
+    let c = security::config()?;
+    let mut service = String::new();
+    security::open_private(Path::new("/etc/pam.d/gxfp51b7-test"))?
+        .take(8192)
+        .read_to_string(&mut service)?;
+    ensure!(
+        service == test_service(&pam_module()?),
+        "Use the standard PAM test service for the selected module"
+    );
+    let gallery = Path::new("/var/lib/fprint")
+        .join(&c.user)
+        .join("gxfp51b7/gxfp51b7-ec-chicagohs");
+    security::trusted(&gallery)?;
+    let mut prints = Vec::new();
+    for entry in fs::read_dir(&gallery)? {
+        let path = entry?.path();
+        let name = path
+            .file_name()
+            .and_then(|v| v.to_str())
+            .ok_or_else(|| anyhow::anyhow!("Invalid print name"))?;
+        let finger: u8 = name.parse()?;
+        ensure!(
+            (1..=10).contains(&finger) && path.metadata()?.len() <= 4 * 1024 * 1024,
+            "Bounded fprintd print required"
+        );
+        prints.push(path);
+    }
+    ensure!(
+        !prints.is_empty() && prints.len() <= 10,
+        "Enroll a fingerprint with fprintd first"
+    );
+    prints.sort();
+    let mut paths = vec![
         Path::new(STATE).join("config.json"),
-        Path::new(STATE).join("template.npz"),
+        super::background_path(),
         Path::new(ROOT).join("gxfp51b7"),
-        Path::new("/usr/lib/security/pam_gxfp51b7.so").to_owned(),
+        pam_module()?,
+        Path::new(security::ADAPTER).to_owned(),
         Path::new(ROOT).join("pam_probe"),
         Path::new("/etc/pam.d/gxfp51b7-test").to_owned(),
-    ] {
+    ];
+    paths.extend(prints);
+    let mut hash = Sha256::new();
+    for path in paths {
+        // A length prefix binds file boundaries as well as the private contents.
         let mut file = security::open_private(&path)?;
+        hash.update(path.as_os_str().as_encoded_bytes());
+        hash.update(file.metadata()?.len().to_le_bytes());
         let mut chunk = [0; 65536];
         loop {
             let n = file.read(&mut chunk)?;
@@ -151,56 +210,31 @@ fn fingerprint() -> Result<String> {
     }
     Ok(format!("{:x}", hash.finalize()))
 }
-pub fn enroll(user: &str) -> Result<()> {
+pub(crate) fn calibrate(user: &str) -> Result<()> {
     installed()?;
     let user = security::account(user)?;
     ensure!(
         !fs::read_to_string("/etc/pam.d/sddm")?.contains(BEGIN),
-        "Disable the SDDM fingerprint branch before enrollment"
+        "Calibrate before enabling the SDDM fingerprint branch"
     );
     active()?;
-    prompt("Remove all fingers, then press Enter to capture the background.")?;
-    let background = Array1::from(image::decode(&super::capture::capture(
-        &super::private_directory(),
-    )?)?);
-    let mut images = Array3::zeros((15, 56, 72));
-    for index in 0..15 {
-        prompt(&format!(
-            "Place the same index finger, then press Enter ({}/15).",
-            index + 1
-        ))?;
-        let pixels = image::decode(&super::capture::capture(&super::private_directory())?)?;
-        let (drop, contrast) = image::quality(&pixels, background.as_slice().unwrap())?;
-        ensure!(
-            drop >= 900. && contrast >= 40.,
-            "Insufficient contact; previous enrollment remains available"
-        );
-        images
-            .slice_mut(s![index, .., ..])
-            .assign(&image::prepare(&pixels, background.as_slice().unwrap())?);
-        prompt("Lift the finger completely, wait two seconds, then press Enter.")?;
-    }
-    let template = Template { background, images };
-    let data = template.write(io::Cursor::new(Vec::new()))?.into_inner();
-    // Invalidates the old enrollment before replacing its template atomically.
+    prompt("Clear the sensor, then press Enter to capture the background.")?;
+    let background = image::decode(&super::capture::capture(&super::private_directory())?)?;
+    let _ = gxfp_backends::chicago::Chicago::new(&background)?;
     let mut config = Config {
         enabled: false,
         user: user.name,
         uid: user.uid.as_raw(),
-        policy: "experimental-affine-ncc-v3".into(),
-        threshold: 0.86,
-        reference_count: 15,
-        experimental: true,
     };
     save("config.json", &config)?;
-    atomic_write(&Path::new(STATE).join("template.npz"), &data, 0o600)?;
+    save("background.json", &background)?;
+    remove_report()?;
     config.enabled = true;
     save("config.json", &config)?;
-    remove_report()?;
-    println!("Enrollment stored privately. Run check before enabling SDDM.");
+    println!("Calibration stored privately. Enroll with fprintd-enroll, then run check.");
     Ok(())
 }
-pub fn check() -> Result<()> {
+pub(crate) fn check() -> Result<()> {
     installed()?;
     active()?;
     let c = security::config()?;
@@ -216,33 +250,28 @@ pub fn check() -> Result<()> {
         ("little", false, "Place a different little finger"),
     ] {
         prompt(&format!("{message}, then press Enter."))?;
-        let helper = super::validation::bounded(
-            Command::new(Path::new(ROOT).join("gxfp51b7"))
-                .args(["verify", &c.user])
-                .env_clear()
-                .env("PATH", "/usr/bin:/bin")
-                .env("LANG", "C.UTF-8"),
-            Duration::from_secs(15),
-        )?;
-        ensure!(
-            helper.code() == Some(if expected { 0 } else { 1 }),
-            "Capture or matching failed for {label}"
-        );
-        // Check PAM as a separate invocation with the same contact maintained.
         let pam = super::validation::bounded(
             Command::new(Path::new(ROOT).join("pam_probe"))
                 .arg(&c.user)
                 .env_clear()
                 .env("PATH", "/usr/bin:/bin")
                 .env("LANG", "C.UTF-8"),
-            Duration::from_secs(18),
+            Duration::from_secs(30),
         )?;
         ensure!(
-            pam.code() == Some(if expected { 0 } else { 1 }),
+            pam.code()
+                == Some(if expected {
+                    0
+                } else if label == "empty" {
+                    9
+                } else {
+                    // pam_fprintd exhausts max-tries=1 after verify-no-match.
+                    11
+                }),
             "Unexpected PAM result for {label}"
         );
         results.push(json!({"case":label,"accepted":expected}));
-        println!("Expected helper and PAM result observed.");
+        println!("Expected standard PAM result observed.");
     }
     ensure!(
         initial == fingerprint()?,
@@ -252,10 +281,10 @@ pub fn check() -> Result<()> {
         "live-validation.json",
         &json!({"fingerprint":initial,"results":results}),
     )?;
-    println!("Five live helper/PAM checks passed. Local commissioning evidence stored privately.");
+    println!("Five standard PAM checks passed. Local commissioning evidence stored privately.");
     Ok(())
 }
-pub fn enable() -> Result<()> {
+pub(crate) fn enable() -> Result<()> {
     installed()?;
     active()?;
     let c = security::config()?;
@@ -271,7 +300,7 @@ pub fn enable() -> Result<()> {
     let path = Path::new("/etc/pam.d/sddm");
     security::trusted(path)?;
     let original = fs::read_to_string(path)?;
-    let updated = enable_text(&original, &c.user)?;
+    let updated = enable_text(&original, &c.user, &pam_module()?)?;
     let backup = Path::new(STATE).join("backups");
     if !backup.exists() {
         fs::create_dir(&backup)?;
@@ -286,7 +315,7 @@ pub fn enable() -> Result<()> {
     println!("SDDM fingerprint branch enabled. Password authentication available.");
     Ok(())
 }
-pub fn disable() -> Result<()> {
+pub(crate) fn disable() -> Result<()> {
     installed()?;
     let path = Path::new("/etc/pam.d/sddm");
     security::trusted(path)?;
@@ -315,15 +344,35 @@ mod tests {
     const ORIGINAL: &str = "#%PAM-1.0\n\nauth        include     system-login\n-auth optional pam_kwallet5.so\naccount include system-login\npassword include system-login\nsession include system-login\n";
     #[test]
     fn roundtrip_with_later_edits() {
-        let enabled = enable_text(ORIGINAL, "testuser").unwrap();
-        assert!(enabled.contains("user=testuser\n"));
+        let enabled = enable_text(
+            ORIGINAL,
+            "testuser",
+            Path::new("/usr/lib/security/pam_fprintd.so"),
+        )
+        .unwrap();
+        assert!(enabled.contains("pam_fprintd.so max-tries=1 timeout=20\n"));
         assert_eq!(
             disable_text(&(enabled + "# later edit\n")).unwrap(),
             ORIGINAL.to_owned() + "# later edit\n"
         );
+        for module in [
+            Path::new("/usr/lib/security/pam_fprintd.so").to_owned(),
+            Path::new(ROOT).join("pam_fprintd.so"),
+        ] {
+            let directive = format!("{} max-tries=1 timeout=20\n", module.display());
+            assert!(test_service(&module).contains(&directive));
+            assert!(
+                enable_text(ORIGINAL, "testuser", &module)
+                    .unwrap()
+                    .contains(&directive)
+            );
+        }
     }
     #[test]
     fn rejects_injection_and_ambiguous_layout() {
+        for module in ["/tmp/pam_fprintd.so", "/usr/lib/security/pam_permit.so"] {
+            assert!(enable_text(ORIGINAL, "testuser", Path::new(module)).is_err());
+        }
         for user in [
             "root",
             "test\nauth sufficient pam_permit.so",
@@ -331,16 +380,42 @@ mod tests {
             "1user",
             "a$b",
         ] {
-            assert!(enable_text(ORIGINAL, user).is_err());
+            assert!(
+                enable_text(
+                    ORIGINAL,
+                    user,
+                    Path::new("/usr/lib/security/pam_fprintd.so")
+                )
+                .is_err()
+            );
         }
         for text in [
             "auth include common-auth\n",
             "auth required pam_deny.so\nauth include system-login\n",
         ] {
-            assert!(enable_text(text, "testuser").is_err());
+            assert!(
+                enable_text(
+                    text,
+                    "testuser",
+                    Path::new("/usr/lib/security/pam_fprintd.so")
+                )
+                .is_err()
+            );
         }
-        let enabled = enable_text(ORIGINAL, "testuser").unwrap();
-        assert!(enable_text(&enabled, "testuser").is_err());
+        let enabled = enable_text(
+            ORIGINAL,
+            "testuser",
+            Path::new("/usr/lib/security/pam_fprintd.so"),
+        )
+        .unwrap();
+        assert!(
+            enable_text(
+                &enabled,
+                "testuser",
+                Path::new("/usr/lib/security/pam_fprintd.so")
+            )
+            .is_err()
+        );
         assert!(disable_text(&enabled.replace(END, "")).is_err());
         assert_eq!(disable_text(ORIGINAL).unwrap(), ORIGINAL);
     }

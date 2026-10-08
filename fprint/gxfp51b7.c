@@ -144,7 +144,7 @@ static void task_run(GTask *task, gpointer object, gpointer data,
   if (!g_output_stream_close(output, cancel, &error))
     goto fail;
   for (;;) {
-    gchar line[128];
+    gchar line[128] = {0};
     gsize count = 0;
     do {
       guint8 byte = 0;
@@ -153,6 +153,11 @@ static void task_run(GTask *task, gpointer object, gpointer data,
         if (!error)
           g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_PARTIAL_INPUT,
                               "Fingerprint worker ended before its result");
+        goto fail;
+      }
+      if (!byte) {
+        g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+                            "NUL in worker event");
         goto fail;
       }
       if (byte == '\n')

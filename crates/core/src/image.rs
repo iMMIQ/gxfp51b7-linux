@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 use anyhow::{Result, ensure};
 use ndarray::Array2;
-use ndarray_ndimage::{BorderMode, gaussian_filter};
 
 pub const WIDTH: usize = 80;
 pub const HEIGHT: usize = 64;
@@ -44,24 +43,6 @@ pub fn decode(source: &[u8]) -> Result<Vec<u16>> {
         }
     }
     Ok(pixels)
-}
-
-pub fn prepare(pixels: &[u16], background: &[u16]) -> Result<Array2<f64>> {
-    ensure!(
-        pixels.len() == PIXELS && background.len() == PIXELS,
-        "Expected 80x64 pixels"
-    );
-    let delta = Array2::from_shape_vec(
-        (HEIGHT, WIDTH),
-        background
-            .iter()
-            .zip(pixels)
-            .map(|(&b, &p)| f64::from(b) - f64::from(p))
-            .collect(),
-    )?;
-    let filtered = gaussian_filter(&delta, 0.7, 0, BorderMode::Reflect, 4)
-        - gaussian_filter(&delta, 2., 0, BorderMode::Reflect, 4);
-    Ok(filtered.slice(ndarray::s![4..60, 4..76]).to_owned())
 }
 
 pub fn quality(pixels: &[u16], background: &[u16]) -> Result<(f64, f64)> {
@@ -112,6 +93,5 @@ mod tests {
         }
         let p = vec![2000; PIXELS];
         assert_eq!(quality(&p, &p).unwrap(), (0., 0.));
-        assert_eq!(prepare(&p, &p).unwrap(), Array2::zeros((56, 72)));
     }
 }

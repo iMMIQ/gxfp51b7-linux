@@ -8,16 +8,14 @@ additional coverage as enrollment progresses.
 
 ## Build
 
-Install GLib/GIO development headers, OpenCV 4 or 5 and its development headers,
-libclang, pkg-config, Linux-PAM development headers and libfprint TOD development
-headers. Rust 1.88 or newer builds the host workspace.
+Install GLib/GIO development headers, pkg-config, Linux-PAM development headers and libfprint TOD development
+headers. Rust 1.99.0 builds the host workspace.
 
 ```sh
 make check fprint
 ```
 
-On Ubuntu 24.04 the development packages are `libglib2.0-dev`, `libopencv-dev`,
-`libclang-dev`, `pkg-config`, `libpam0g-dev` and `libfprint-2-tod-dev`.
+On Ubuntu 24.04 the development packages are `libglib2.0-dev`, `pkg-config`, `libpam0g-dev` and `libfprint-2-tod-dev`.
 The TOD driver is installed into the library's `tod-1` directory. The following
 paths correspond to Arch's libfprint-tod package:
 
@@ -35,9 +33,9 @@ The drop-in enables the real EC device through a fixed discovery value and
 permits the worker's loopback SSH connection and ACPI doorbell write. The host
 module, ACPI resources, SGX guest, private assets and account commissioning are
 prepared with the [installation guide](INSTALL.md). The account configuration
-must be enabled and bound to the intended regular local account. The existing
-private NPZ background supplies the initial finger-off calibration gate; the
-new enrollment obtains its own fresh background and Chicago gallery.
+must be enabled and bound to the intended regular local account. The commissioning `background.json` supplies the initial finger-off calibration
+gate; the existing deployment reader also accepts its previously recorded NPZ
+background. Enrollment obtains its own fresh background and Chicago gallery.
 
 ## Enrollment and validation
 
@@ -85,10 +83,10 @@ original `system-login` include supplies the password fallback. Keep a private
 copy of the previous SDDM file for restoration. SDDM reads PAM configuration
 for each new authentication attempt.
 
-The `gxfp51b7 enable` and `check` commands commission the custom affine PAM path.
-For the standard fprintd path, use the separate PAM checks described here and
-preserve its own deployment evidence. `gxfp51b7 disable` removes the project's
-marked SDDM branch and stops the acquisition VM.
+The `gxfp51b7 check` and `enable` commands commission and activate this standard
+PAM path. `check` binds its result to the selected module and the enrolled prints;
+`enable` generates the marked SDDM block after those checks pass.
+`gxfp51b7 disable` removes the marked branch and stops the acquisition VM.
 
 ## Existing open-fprintd installations
 
@@ -103,20 +101,3 @@ staged under `/usr/local/lib/gxfp51b7`; a local `ExecStart` override selects tha
 daemon, and open-fprintd is masked. This local arrangement is reversible by
 removing the local systemd and `/usr/local/share/dbus-1/system-services/net.reactivated.Fprint.service` activation overrides, reloading D-Bus configuration, unmasking open-fprintd and restoring the saved PAM
 file. Fresh deployments can use their distribution's official fprintd package.
-
-## Offline matcher comparison
-
-The Rust `compare` command evaluates the same frozen references and independent
-probes with affine NCC, ChicagoHS and an OpenCV RootSIFT comparator:
-
-```sh
-build/gxfp51b7 compare --manifest /absolute/private/dataset.json
-```
-
-The manifest contains `background`, `references` and `probes`. Each probe has a
-`name`, `source` and `enrolled` boolean. Capture paths resolve relative to the
-manifest directory. Output contains aggregate scores, quality, enrollment
-feedback and timing. Keep the manifest, captures and generated output in private
-storage. RootSIFT is a research comparator whose numeric evidence requires its
-own independently calibrated decision policy. Chicago uses the pinned upstream
-selector and match rule; verification evaluates one quality-accepted capture.

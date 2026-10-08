@@ -9,24 +9,21 @@ use std::{
     path::Path,
 };
 
-pub const ROOT: &str = "/usr/local/lib/gxfp51b7";
-pub const STATE: &str = "/var/lib/gxfp51b7";
+pub(crate) const ROOT: &str = "/usr/local/lib/gxfp51b7";
+pub(crate) const ADAPTER: &str = "/usr/lib/libfprint-2/tod-1/libfprint-gxfp51b7.so";
+pub(crate) const STATE: &str = "/var/lib/gxfp51b7";
 #[derive(Serialize, Deserialize)]
-pub struct Config {
-    pub enabled: bool,
-    pub user: String,
-    pub uid: u32,
-    pub policy: String,
-    pub threshold: f64,
-    pub reference_count: usize,
-    pub experimental: bool,
+pub(crate) struct Config {
+    pub(crate) enabled: bool,
+    pub(crate) user: String,
+    pub(crate) uid: u32,
 }
-pub fn root() -> Result<()> {
+pub(crate) fn root() -> Result<()> {
     ensure!(Uid::effective().is_root(), "Requires root");
     setrlimit(Resource::RLIMIT_CORE, 0, 0)?;
     Ok(())
 }
-pub fn trusted(path: &Path) -> Result<()> {
+pub(crate) fn trusted(path: &Path) -> Result<()> {
     for component in path.ancestors() {
         let m = fs::symlink_metadata(component)?;
         ensure!(
@@ -37,7 +34,7 @@ pub fn trusted(path: &Path) -> Result<()> {
     }
     Ok(())
 }
-pub fn open_private(path: &Path) -> Result<File> {
+pub(crate) fn open_private(path: &Path) -> Result<File> {
     trusted(path)?;
     let file = OpenOptions::new()
         .read(true)
@@ -50,26 +47,21 @@ pub fn open_private(path: &Path) -> Result<File> {
     );
     Ok(file)
 }
-pub fn config() -> Result<Config> {
+pub(crate) fn config() -> Result<Config> {
     Ok(serde_json::from_reader(open_private(
         &Path::new(STATE).join("config.json"),
     )?)?)
 }
-pub fn account(user: &str) -> Result<User> {
+pub(crate) fn account(user: &str) -> Result<User> {
     ensure!(super::admin::valid_user(user), "Invalid local account name");
     let user = User::from_name(user)?.ok_or_else(|| anyhow::anyhow!("Unknown local user"))?;
     ensure!(!user.uid.is_root(), "Expected regular local account");
     Ok(user)
 }
-pub fn verify_account(user: &str, c: &Config) -> Result<()> {
+pub(crate) fn verify_account(user: &str, c: &Config) -> Result<()> {
     let account = account(user)?;
     ensure!(
-        c.enabled
-            && account.name == c.user
-            && account.uid.as_raw() == c.uid
-            && c.policy == "experimental-affine-ncc-v3"
-            && c.threshold == 0.86
-            && c.reference_count == 15,
+        c.enabled && account.name == c.user && account.uid.as_raw() == c.uid,
         "Inactive or incompatible enrollment"
     );
     let shadow = fs::read_to_string("/etc/shadow")?;

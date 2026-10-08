@@ -1,65 +1,52 @@
-# Migrating an existing deployment to Rust
+# Migrating to the consolidated fprintd implementation
 
-Version 0.2 uses a compiled Rust host executable and PAM module. The enclave
-assets, guest disk, SSH identity and v3 template format carry over from version
-0.1. The read-only kernel helper and guest loader keep their established ABI.
+Version 0.3 uses one authentication path: the Rust acquisition worker, ChicagoHS,
+libfprint TOD and standard fprintd/PAM. Existing Chicago fprintd enrollments keep
+their device identity and private print format. Account configuration reads the
+existing username, UID and enabled state. Existing NPZ files supply only the
+commissioned empty-sensor background.
 
-## Prepare and validate
+## Build and stage
 
-Run `make check`, then place the new executable at
-`/usr/local/lib/gxfp51b7/gxfp51b7`, owned by root with mode 0755. Preserve copies
-of the current PAM module, service unit, configuration and commissioning report
-in the root-private backup directory. Keep the enrolled template in its current
-root-private location.
+Run `make check`. Preserve the current helper, adapter, SDDM file, configuration,
+service drop-ins and probes in a root-private backup directory. Install the new
+helper and adapter atomically as described in the [fprintd guide](FPRINTD.md),
+and copy the new PAM probes to the root-owned runtime directory.
 
-The executable uses `guest-private/` for a standard deployment. During migration
-it also recognizes the earlier root-owned `work/research/sgx-vm/` directory.
-Its existing identity and pinned host key provide continuity with the same guest.
+The new probe returns the Linux-PAM result directly: 0 for success, 7 for an
+authentication error, 9 for an unavailable result and 11 for exhausted
+attempts. With `max-tries=1`, standard `pam_fprintd` returns 11 after a mismatch.
+Commissioning expects that mismatch result and uses these distinctions to reject backend failures during different-finger controls.
 
-Run these checks:
+Configure `/etc/pam.d/gxfp51b7-test` with the same standard module selected for
+SDDM and the normal account include:
 
-```sh
-sudo /usr/local/lib/gxfp51b7/gxfp51b7 runtime-ready
-sudo /usr/local/lib/gxfp51b7/gxfp51b7 capture-check
-sudo /usr/local/lib/gxfp51b7/gxfp51b7 verify YOUR_ACCOUNT
+```text
+auth required /usr/lib/security/pam_fprintd.so max-tries=1 timeout=20
+account include system-login
 ```
 
-`verify` returns 0 for a matching finger, 1 for a completed rejection and 2 for
-an unavailable backend or incompatible enrollment. Check an empty sensor, the
-enrolled finger and different fingers while maintaining the current template.
-For local diagnosis, `verify YOUR_ACCOUNT --diagnostic` writes capture quality,
-matching correlation and backend error context to standard error. A normal
-verification keeps those details private. Each live check uses a fresh press;
-keep the enrolled finger in contact until that check finishes.
+On a deployment with the staged official module at
+`/usr/local/lib/gxfp51b7/pam_fprintd.so`, use that exact path in the test service.
+The administrator commands select that root-owned staged module when present,
+and otherwise select the distribution module. Commissioning verifies that the
+test service references the selected module.
 
-Place the new PAM library in a separate root-owned staging directory. Create a
-separate PAM test service pointing to that staged library and the explicit
-`user=YOUR_ACCOUNT` argument. Build the probe with that service name and check
-its authentication/account results. This exercises the new module before it
-becomes the module referenced by SDDM.
+## Validate and activate
 
-## Activate
+Restart only the fingerprint daemon, confirm the pinned guest with
+`gxfp51b7 runtime-ready`, and run `capture-check`. Run `gxfp51b7 check` for the
+empty sensor, enrolled finger and three different fingers. Existing configured
+SDDM branches can continue using the standard PAM module during these checks;
+changing their module requires a saved recovery copy and fresh qualification.
 
-After validation, install `build/pam_gxfp51b7.so` at
-`/usr/lib/security/pam_gxfp51b7.so` with root ownership and mode 0644. Install the
-Rust service unit from `data/gxfp51b7-vm.service`, reload systemd and restart the
-fingerprint VM service. Run `runtime-ready` and the isolated checks again.
-The existing marked SDDM branch resolves the updated module through the same
-module filename. Password, account and session configuration remain available.
+For a new account or renewed calibration, use the fresh-deployment sequence in
+[INSTALL.md](INSTALL.md): clear the marked branch, start the VM, calibrate, enroll
+through fprintd, check and enable. The original private guest identity and enclave
+assets remain part of the commissioned runtime.
 
-Refresh commissioning evidence with `gxfp51b7 check`. Its report binds the Rust
-executable, PAM library, configuration, probe and template to their digests.
-The original `.npz` enrollment is compatible with the Rust template reader.
-
-For a failed migration, restore the saved PAM module and service unit, reload
-systemd and restart the fingerprint VM. The saved source remains available for
-that earlier deployment. Complete recovery and removal steps are in
-[the installation guide](INSTALL.md#recovery-and-removal).
-
-## ChicagoHS and standard PAM
-
-The [fprintd guide](FPRINTD.md) covers the ChicagoHS path. It reuses the
-commissioned EC/enclave runtime, captures a fresh calibration background,
-collects 12 accepted positions and stores the completed print through fprintd.
-The standard PAM path has its own isolated and SDDM checks. Keep its saved PAM
-configuration available when switching between the two login paths.
+The root-owned `work/research/sgx-vm` location and existing capture lock name
+remain supported for the established deployment. The previous affine matcher,
+custom PAM implementation and research comparison commands are retained in Git
+history. Their generated libraries can be removed from the build directory after
+migration. Preserve a working password and the saved configuration for rollback.

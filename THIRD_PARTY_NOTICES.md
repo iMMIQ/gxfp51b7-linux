@@ -9,10 +9,9 @@ The following projects informed research or are externally obtained dependencies
 | Intel legacy SGX driver 2.11.0 | Guest-only `/dev/isgx` and ioctl ABI | User-supplied [upstream](https://github.com/intel/linux-sgx-driver) source with its notices |
 | Intel SGX 2.18 source | Public metadata/launch authorization ABI and public whitelist verification key | Public-key constants referenced in `tools/sgx_authorization.py`; SDK/runtime obtained externally |
 | QEMU/KVM, Linux, Linux-PAM, OpenSSH, systemd | Runtime infrastructure | External dependencies |
-| NumPy, SciPy, pefile, cryptography | Offline regression reference and PE/signature verification | Development dependencies |
+| NumPy, pefile, cryptography, Ruff, clang-format | Offline regression reference and PE/signature verification | Development dependencies |
 | [berkekbgz/libfprint-goodix-spi](https://github.com/berkekbgz/libfprint-goodix-spi) | ChicagoHS algorithm, CRC primitive and synthetic tests; Berke Kabagöz, LGPL-2.1-or-later | Verbatim pinned source; [provenance](crates/backends/native/UPSTREAM.md) |
-| [goodix-fp-linux-dev/sigfm](https://github.com/goodix-fp-linux-dev/sigfm) | Feature matching research | Link only; our RootSIFT comparator uses OpenCV |
-| OpenCV, GLib/GIO, libfprint TOD, fprintd | Matching library and standard fingerprint infrastructure | External dependencies |
+| GLib/GIO, libfprint TOD, fprintd | Matching library and standard fingerprint infrastructure | External dependencies |
 | Sigfrodr/libfprint-goodixtls | Prior protocol/matcher research comparison | Research reference |
 | OpenGoodixSPI issue #16 | GXFP51B7 EC protocol discussion | Link only |
 
@@ -28,11 +27,10 @@ libraries retain these upstream terms:
 
 | Crates | SPDX license |
 | --- | --- |
-| `ndarray`, `ndarray-conv`, `ndarray-ndimage`, `ndarray-npy`, `interpn` | MIT OR Apache-2.0 |
-| `anyhow`, `clap`, `serde`, `serde_json`, `libc`, `memmap2`, `sha2`, `tempfile`, `wait-timeout` | MIT OR Apache-2.0 |
-| `nix`, `pam-bindings`, `opencv` | MIT |
+| `ndarray`, `ndarray-npy` | MIT OR Apache-2.0 |
+| `anyhow`, `clap`, `serde`, `serde_json`, `memmap2`, `sha2`, `tempfile`, `wait-timeout` | MIT OR Apache-2.0 |
+| `nix` | MIT |
 | `cc`, `pkg-config` | MIT OR Apache-2.0 |
-| `rustix` | Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT |
 
 The application's own source uses LGPL-3.0-or-later. Vendor components and the
 externally installed guest SGX driver retain their respective distribution terms.
