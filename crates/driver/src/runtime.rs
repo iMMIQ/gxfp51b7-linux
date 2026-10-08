@@ -7,7 +7,7 @@ use std::{
 };
 use wait_timeout::ChildExt;
 
-pub fn start() -> Result<()> {
+pub(crate) fn start() -> Result<()> {
     let user = nix::unistd::User::from_name("gxfpvm")?
         .ok_or_else(|| anyhow::anyhow!("Missing VM account"))?;
     ensure!(
@@ -24,7 +24,7 @@ pub fn start() -> Result<()> {
     ]).env_clear().env("PATH","/usr/bin:/bin").env("LANG","C.UTF-8").exec();
     Err(error.into())
 }
-pub fn ready() -> Result<()> {
+pub(crate) fn ready() -> Result<()> {
     super::security::root()?;
     let private = super::private_directory();
     for name in ["known_hosts", "id_ed25519"] {

@@ -12,7 +12,7 @@
 | Insufficient contact | Lift fully between presses, place the enrolled finger gently and capture an empty enrollment background. |
 | SDDM layout refused | The administrator command accepts the tested Arch `system-login` layout. Review other distributions separately. |
 | No fingerprint prompt in SDDM | Submit an empty password first. Some themes block this; eos-breeze accepts the empty submission. |
-| Fingerprint rejected | Wait for password fallback. Repeated failures require fresh validation/enrollment using the fixed threshold. |
+| Fingerprint rejected | Wait for password fallback. Repeated failures require fresh standard PAM validation and a complete 12-stage fprintd enrollment. |
 
 Useful metadata commands:
 

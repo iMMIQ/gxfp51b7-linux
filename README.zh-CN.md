@@ -1,10 +1,12 @@
 # GXFP51B7 Linux
 
-[English](README.md) · [安装说明](docs/INSTALL.md) · [fprintd 接入](docs/FPRINTD.md) · [设计说明](docs/ARCHITECTURE.md) · [验证记录](docs/VALIDATION.md)
+[English](README.md) · [安装说明](docs/INSTALL.md) · [fprintd 接入](docs/FPRINTD.md) · [验证记录](docs/VALIDATION.md)
 
-为 **华为 MACHC-WAX9 / ACPI GXFP51B7** 使用 Rust 实现的 Linux 指纹采集与 SDDM 登录支持。
+为 **华为 MACHC-WAX9 / ACPI GXFP51B7** 提供 Linux 指纹登录。
 
-项目通过 Rust 加密采集后端和 ChicagoHS 匹配器接入 libfprint TOD 与 fprintd，由标准 pam_fprintd 完成 SDDM 登录认证。Rust 仿射匹配器和 PAM 模块提供现有部署路径与离线对照。
+Rust 负责加密采集、账户检查和录入流程，ChicagoHS 负责匹配，libfprint TOD
+与标准 fprintd 负责模板管理和认证接口。SDDM 使用标准 pam_fprintd 完成指纹认证。
+录入过程采集同一根手指的 12 个有效位置，并提供抬起、重新放置和位置调整提示。
 
 ## 适配配置
 
@@ -19,28 +21,39 @@
 
 ## 工作方式
 
-指纹传感器通过 ACPI/EC 邮箱传输加密数据。原厂签名组件在本机 KVM 隔离环境内完成 BIOS 密钥解封和 TLS 通信，密钥保存在原厂 enclave 内。宿主解码 80×64 指纹图像，与本机录入的模板匹配，再由 PAM 模块完成登录认证。
+传感器通过 ACPI/EC 邮箱传输加密数据。原厂签名组件在本机 KVM 隔离环境内
+解封通信密钥并验证采集数据，密钥保存在 enclave 内。宿主解码 80×64 图像，
+检查接触质量并调用 ChicagoHS 匹配器。采集在内存中处理，校准数据和录入模板
+保存在本机私有目录。
 
-## 构建
+## 构建与检查
 
-准备 Rust 1.88+、C 编译器、GLib/GIO、OpenCV 4 或 5、libclang、pkg-config、PAM 开发头文件，以及离线工具使用的 Python 3.11+，然后运行：
+工程通过 `rust-toolchain.toml` 固定 **Rust 1.99.0**。准备 C 编译器、GLib/GIO、
+libfprint TOD 开发头文件、pkg-config、PAM 开发头文件和 Python 3.11+，然后运行：
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-tools.txt
-make check PYTHON=python
-# 准备 libfprint TOD 开发头文件后：
-make fprint
+cargo install cargo-machete --version 0.9.2 --locked
+make check
 ```
 
-离线检查覆盖编译、协议解析、图像解码、匹配计算和 PAM 配置生成。
+检查涵盖构建、Rust 和原生算法测试、独立解码与质量对照、Rust/C/Python 格式化、
+Clippy、Ruff、依赖使用情况和文档。内核模块使用 `make kernel` 构建。
 
 ## 安装与使用
 
-安装使用仓库源码，以及自行准备的原厂组件、隔离虚拟机和通信身份。指纹模板在本机录入时生成。[fprintd 接入说明](docs/FPRINTD.md)介绍 ChicagoHS 的 12 步录入与标准登录配置。请依照[安装说明](docs/INSTALL.md) · [fprintd 接入](docs/FPRINTD.md)完成隔离环境准备、安装、录入和对照验证。
+依照[安装说明](docs/INSTALL.md)准备原厂组件、隔离虚拟机和通信身份，完成
+宿主安装、空置传感器校准、fprintd 录入、同指与异指对照，再启用 SDDM。
 
-接入后，在 SDDM 选择录入的账户，留空密码并提交登录，再轻触已录入的食指。识别失败或超时后可继续使用密码。
+```sh
+fprintd-enroll -f right-index-finger YOUR_ACCOUNT
+fprintd-verify -f right-index-finger YOUR_ACCOUNT
+```
+
+接入后，在 SDDM 选择录入账户，留空密码并提交登录，再轻触已录入的食指。
+识别失败或超时后可继续使用密码。
 
 恢复密码登录分支：
 
@@ -48,10 +61,11 @@ make fprint
 sudo /usr/local/lib/gxfp51b7/gxfp51b7 disable
 ```
 
-此命令只移除本项目标记的登录分支、禁用指纹配置并停止隔离环境，保留其他登录设置及私有资料。
-
 ## 发布内容与许可证
 
-仓库提供源码、构建入口、离线测试、安装与恢复工具、设计说明及匿名汇总结果。指纹样本和模板、私钥、BIOS 容器、原厂组件及虚拟机镜像保存在本机私有目录。
+仓库提供源码、构建入口、离线测试、安装与恢复工具及汇总验证结果。
+指纹样本和模板、私钥、BIOS 容器、原厂组件和虚拟机镜像保存在本机私有目录。
 
-用户态代码采用 **LGPL v3 或更新版本**。内核模块的独立许可范围见 [LICENSE.md](LICENSE.md)，外部参考与依赖见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+原创用户态代码采用 **LGPL v3 或更新版本**，内核模块提供双许可，ChicagoHS
+上游源码保留其 LGPL v2.1 或更新版本许可。范围见 [LICENSE.md](LICENSE.md)，
+来源与依赖见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

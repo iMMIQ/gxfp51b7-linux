@@ -10,14 +10,14 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const SIZE: usize = 0x8000;
-pub const RX: usize = 0x1000;
-pub struct Mailbox {
+pub(crate) const SIZE: usize = 0x8000;
+pub(crate) const RX: usize = 0x1000;
+pub(crate) struct Mailbox {
     map: MmapRaw,
     _lock: Flock<File>,
 }
 impl Mailbox {
-    pub fn open() -> Result<Self> {
+    pub(crate) fn open() -> Result<Self> {
         super::security::root()?;
         ensure!(
             fs::read_to_string("/sys/class/dmi/id/sys_vendor")?.trim() == "HUAWEI"
@@ -71,7 +71,7 @@ impl Mailbox {
             .map_raw(&memory)?;
         Ok(Self { map, _lock: lock })
     }
-    pub fn snapshot(&self, offset: usize, len: usize) -> Result<Vec<u8>> {
+    pub(crate) fn snapshot(&self, offset: usize, len: usize) -> Result<Vec<u8>> {
         ensure!(
             offset <= SIZE && len <= SIZE - offset,
             "Read outside mailbox"
@@ -82,7 +82,7 @@ impl Mailbox {
             .map(|i| unsafe { ptr::read_volatile(self.map.as_ptr().add(i)) })
             .collect())
     }
-    pub fn send(&mut self, packet: &[u8]) -> Result<()> {
+    pub(crate) fn send(&mut self, packet: &[u8]) -> Result<()> {
         ensure!(packet.len() <= RX, "Transmit outside mailbox");
         for (i, &value) in packet.iter().enumerate() {
             // SAFETY: validated TX bounds and exclusive host lock; device memory
@@ -100,7 +100,7 @@ impl Mailbox {
         ensure!(!result.starts_with("Error"), "ACPI doorbell failed");
         Ok(())
     }
-    pub fn tls_hello(&mut self) -> Result<()> {
+    pub(crate) fn tls_hello(&mut self) -> Result<()> {
         let before = self.snapshot(RX, 0x1000)?;
         self.send(&encode(0xd0, &[0, 0])?)?;
         let deadline = Instant::now() + Duration::from_secs(2);

@@ -12,21 +12,19 @@ use std::{
 use wait_timeout::ChildExt;
 
 /// Bound the entire helper process group, including its SSH subprocess.
-pub fn bounded(command: &mut Command, limit: Duration) -> Result<ExitStatus> {
+pub(crate) fn bounded(command: &mut Command, limit: Duration) -> Result<ExitStatus> {
     let mut child = command
         .process_group(0)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
-    let result = child.wait_timeout(limit);
-    let pid = Pid::from_raw(child.id().try_into()?);
-    let _ = killpg(pid, Signal::SIGTERM);
-    std::thread::sleep(Duration::from_millis(50));
-    let _ = killpg(pid, Signal::SIGKILL);
-    match result {
+    match child.wait_timeout(limit) {
         Ok(Some(status)) => Ok(status),
         other => {
+            // The leader stays unreaped until group termination, preserving its PID.
+            let pid = Pid::from_raw(child.id().try_into()?);
+            let _ = killpg(pid, Signal::SIGKILL);
             let _ = child.kill();
             let _ = child.wait();
             match other {

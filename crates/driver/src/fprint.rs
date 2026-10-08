@@ -6,7 +6,6 @@ use gxfp_backends::chicago::{Chicago, Evidence, Print};
 use gxfp_core::image;
 use std::{
     io::{self, Read, Write},
-    path::Path,
     time::{Duration, Instant},
 };
 const MAX_PRINT: usize = 2 * 1024 * 1024;
@@ -63,17 +62,14 @@ fn obtain(background: &[u16], deadline: Instant) -> Result<Vec<u16>> {
 fn retry(e: &Evidence) -> Result<()> {
     event(&format!("retry {}", e.position_reject))
 }
-pub fn run(user: &str, enroll: bool) -> Result<()> {
+pub(crate) fn run(user: &str, enroll: bool) -> Result<()> {
     super::security::root()?;
     let config = super::security::config()?;
     super::security::verify_account(user, &config)?;
     if enroll {
         // The commissioned background gives a conservative finger-off gate.
-        let previous = super::template()?;
-        let background = previous
-            .background
-            .as_slice()
-            .ok_or_else(|| anyhow::anyhow!("Noncontiguous background"))?;
+        let previous = super::background()?;
+        let background = previous.as_slice();
         wait_lift(background)?;
         let refreshed = capture()?;
         let (drop, contrast) = image::quality(&refreshed, background)?;
@@ -131,21 +127,6 @@ pub fn run(user: &str, enroll: bool) -> Result<()> {
         anyhow::bail!("Verification deadline reached")
     }
 }
-pub fn probe() -> Result<()> {
-    super::security::root()?;
-    super::security::trusted(Path::new(super::security::ROOT).join("gxfp51b7").as_path())?;
-    ensure!(
-        std::fs::read_to_string("/sys/class/dmi/id/product_name")?.trim() == "MACHC-WAX9",
-        "Expected MACHC-WAX9"
-    );
-    ensure!(
-        Path::new("/sys/bus/acpi/devices/GXFP51B7:00").exists(),
-        "GXFP51B7 ACPI device required"
-    );
-    super::security::trusted(Path::new("/dev/goodix_bios_sealed"))?;
-    event("ready")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -59,7 +59,7 @@ fn copy(source: &Path, target: &Path, mode: u32) -> Result<()> {
     fs::set_permissions(target, fs::Permissions::from_mode(mode))?;
     Ok(())
 }
-pub fn install(bundle: &Path, user: &str, source: &Path) -> Result<()> {
+pub(crate) fn install(bundle: &Path, user: &str, source: &Path) -> Result<()> {
     security::root()?;
     let user = security::account(user)?;
     for path in [
@@ -68,7 +68,8 @@ pub fn install(bundle: &Path, user: &str, source: &Path) -> Result<()> {
         SHARE,
         DISK,
         "/etc/systemd/system/gxfp51b7-vm.service",
-        "/usr/lib/security/pam_gxfp51b7.so",
+        security::ADAPTER,
+        "/etc/systemd/system/fprintd.service.d/gxfp51b7.conf",
         "/etc/pam.d/gxfp51b7-test",
     ] {
         ensure!(
@@ -117,7 +118,14 @@ pub fn install(bundle: &Path, user: &str, source: &Path) -> Result<()> {
         info["format"] == "qcow2" && info.get("backing-filename").is_none(),
         "Expected a stopped self-contained qcow2 guest"
     );
-    for name in ["gxfp51b7", "pam_gxfp51b7.so", "pam_probe", "pam_sddm_probe"] {
+    let pam_module = super::admin::pam_module()?;
+    security::trusted(Path::new(security::ADAPTER).parent().unwrap())?;
+    for name in [
+        "gxfp51b7",
+        "libfprint-gxfp51b7.so",
+        "pam_probe",
+        "pam_sddm_probe",
+    ] {
         regular(&source.join("build").join(name))?;
     }
     let service = if let Some(user) = nix::unistd::User::from_name("gxfpvm")? {
@@ -194,8 +202,8 @@ pub fn install(bundle: &Path, user: &str, source: &Path) -> Result<()> {
         )?;
     }
     copy(
-        &source.join("build/pam_gxfp51b7.so"),
-        Path::new("/usr/lib/security/pam_gxfp51b7.so"),
+        &source.join("build/libfprint-gxfp51b7.so"),
+        Path::new(security::ADAPTER),
         0o644,
     )?;
     let unit = include_bytes!("../../../data/gxfp51b7-vm.service");
@@ -210,16 +218,16 @@ pub fn install(bundle: &Path, user: &str, source: &Path) -> Result<()> {
             enabled: false,
             user: user.name.clone(),
             uid: user.uid.as_raw(),
-            policy: "experimental-affine-ncc-v3".into(),
-            threshold: 0.86,
-            reference_count: 15,
-            experimental: true,
         },
     )?;
-    let test = format!(
-        "auth required pam_shells.so\nauth requisite pam_nologin.so\nauth requisite pam_faillock.so preauth\nauth required pam_gxfp51b7.so user={}\naccount include system-login\n",
-        user.name
-    );
+    let dropin = Path::new("/etc/systemd/system/fprintd.service.d");
+    directory(dropin, 0o755)?;
+    super::admin::atomic_write(
+        &dropin.join("gxfp51b7.conf"),
+        include_bytes!("../../../data/fprintd-gxfp51b7.conf"),
+        0o644,
+    )?;
+    let test = super::admin::test_service(&pam_module);
     super::admin::atomic_write(
         Path::new("/etc/pam.d/gxfp51b7-test"),
         test.as_bytes(),
@@ -233,6 +241,8 @@ pub fn install(bundle: &Path, user: &str, source: &Path) -> Result<()> {
         "Service reload failed"
     );
     ensure!(fs::metadata(ROOT)?.uid() == 0, "Unsafe runtime ownership");
-    println!("Rust runtime installed. Start the VM, enroll, check and enable SDDM.");
+    println!(
+        "Rust runtime installed. Start the VM, calibrate, enroll with fprintd, check and enable SDDM."
+    );
     Ok(())
 }

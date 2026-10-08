@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+line-length = 100
+target-version = "py311"
+[lint]
+select = ["E4", "E7", "E9", "F", "B"]

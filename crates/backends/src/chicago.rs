@@ -72,8 +72,8 @@ fn valid(raw: &[u16]) -> Result<()> {
     Ok(())
 }
 fn error(buffer: &[c_char; 512]) -> anyhow::Error {
-    // SAFETY: the bridge writes a bounded NUL-terminated message; the buffer starts zeroed.
     anyhow::anyhow!(
+        // SAFETY: the bridge writes a bounded NUL-terminated message into a zeroed buffer.
         unsafe { CStr::from_ptr(buffer.as_ptr()) }
             .to_string_lossy()
             .into_owned()

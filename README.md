@@ -1,72 +1,95 @@
 # GXFP51B7 Linux
 
-[简体中文](README.zh-CN.md) · [Installation](docs/INSTALL.md) · [fprintd setup](docs/FPRINTD.md) · [Design](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md)
+[简体中文](README.zh-CN.md) · [Installation](docs/INSTALL.md) · [Design](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md)
 
-Rust implementation of Linux fingerprint acquisition and SDDM authentication for the **Huawei MACHC-WAX9** with ACPI device **GXFP51B7**.
+Linux fingerprint login for **Huawei MACHC-WAX9 / ACPI GXFP51B7**.
 
-The project provides a Rust encrypted capture backend and a ChicagoHS matcher connected to libfprint TOD and fprintd. Standard `pam_fprintd` supplies SDDM authentication. A Rust affine matcher and PAM module provide the existing deployment path and offline comparison.
+A Rust capture worker connects the EC sensor to the ChicagoHS matcher and
+libfprint TOD. Standard fprintd manages enrollment and standard `pam_fprintd`
+authenticates SDDM. Enrollment collects 12 accepted positions of the same finger.
 
 ## Supported configuration
 
 | Component | Configuration |
 | --- | --- |
 | Laptop / BIOS | Huawei MACHC-WAX9 / 1.24 |
-| CPU | Intel Core i7-10510U, legacy SGX launch flow |
+| CPU | Intel Core i7-10510U, SGX enabled |
 | Sensor / firmware | ChicagoHS `0x2504` / `GF_9ELIBE_EC_19024` |
 | Host | EndeavourOS x86_64, kernel `7.2.9-arch1-1` |
 | Login manager | SDDM 0.21, Arch `system-login` PAM layout |
 | Isolated runtime | QEMU/KVM 11.1.2, Ubuntu 20.04, kernel `5.4.0-216-generic` |
 
-Installation checks the machine identity and its ACPI resources against this configuration.
+Installation validates the machine identity and reserved ACPI resources.
 
 ## How it works
 
-An ACPI/EC mailbox carries the sensor's encrypted traffic. A small host module reads the BIOS-sealed communication container. Original signed Goodix and Intel enclaves run inside a same-machine KVM guest, unseal the communication key and validate the captured data. The host decodes an 80×64 image and compares it with a private local template. A bounded PAM helper supplies an optional fingerprint branch before the existing password path.
+The ACPI/EC mailbox carries encrypted sensor traffic. Original signed Goodix
+and Intel enclaves run inside a same-machine KVM guest and validate captures.
+Rust decodes the 80×64 image, checks contact quality and calls the pinned
+ChicagoHS algorithm. libfprint and fprintd handle print serialization, storage,
+progress, cancellation and authentication access control.
 
-The communication key stays in the vendor enclave. Enrollment templates reside in a root-private directory; normal login capture returns image data in memory.
+The communication key stays inside the vendor enclave. Captures are processed
+in memory; calibration and enrollment files use root-private storage.
 
-## Build and test
+## Build and quality checks
 
-Install Rust 1.88 or newer, a C compiler, GLib/GIO, OpenCV 4 or 5, libclang, pkg-config, PAM development headers and Python 3.11 or newer for offline tooling, then:
+The project pins **Rust 1.99.0** in `rust-toolchain.toml`. Install a C compiler,
+GLib/GIO and libfprint TOD development headers, pkg-config and PAM development
+headers. Python 3.11+ supplies the offline development tools.
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-tools.txt
-make check PYTHON=python
-# With libfprint TOD development headers:
-make fprint
+cargo install cargo-machete --version 0.9.2 --locked
+make check
 ```
 
-These offline checks cover source compilation, packet parsing, image decoding, matching mathematics and PAM configuration generation. The guest loader and host kernel helper are separate build targets; see the [installation guide](docs/INSTALL.md).
+`make check` builds the release executable, adapter and probes, runs Rust and
+native tests, checks independent decoding/quality references, and runs Rust/C/Python
+formatting, strict Clippy, Ruff, dependency usage and documentation checks.
+`make kernel` and the guest build cover their platform-specific components.
 
 ## Installation and use
 
-Installation combines this repository’s source with user-supplied vendor components, a prepared SGX guest and an SSH identity unique to that guest. The [guide](docs/INSTALL.md) documents preparation, host installation, enrollment, live validation, SDDM enablement and rollback. The installation workflow targets the MACHC-WAX9 and uses locally prepared assets. The [fprintd guide](docs/FPRINTD.md) covers ChicagoHS enrollment and standard login integration.
+The [installation guide](docs/INSTALL.md) covers the private vendor bundle,
+SGX guest, host helpers, empty-sensor calibration, fprintd enrollment, live
+qualification and SDDM enablement. The [fprintd guide](docs/FPRINTD.md) describes
+the adapter and standard client interfaces.
 
-After enrollment and successful live validation, select the enrolled account in SDDM, submit an empty password and touch the enrolled index finger. A mismatch, unavailable backend or timeout falls through to password authentication. Some SDDM themes may require a separate UI adjustment; the tested eos-breeze theme accepts an empty password submission.
+```sh
+fprintd-enroll -f right-index-finger YOUR_ACCOUNT
+fprintd-verify -f right-index-finger YOUR_ACCOUNT
+```
+
+After enabling SDDM, select the enrolled account, submit an empty password and
+touch the enrolled finger. Password authentication remains available following
+a mismatch or timeout. The tested eos-breeze theme supports this flow.
 
 ## Repository
 
 ```text
-crates/core/    decoder, image processing, affine matcher and NPZ templates
-crates/backends/ ChicagoHS wrapper and pinned algorithm; OpenCV RootSIFT comparator
-crates/driver/  Rust CLI, transport, enrollment, installer and VM management
-fprint/         libfprint TOD adapter and public API probe
-crates/pam/     Rust PAM authentication module
-pam/           explicit C authentication probes
-kernel/        read-only BIOS-container helper and DKMS configuration
-guest/         enclave ABI loader, entry assembly and guest bootstrap
-tools/         offline vendor verification/export and release checks
-tests/         synthetic parity tests and Python regression references
-data/          matching policy and hardened systemd unit
-docs/          installation, design, validation and troubleshooting
+crates/core/     decoder, quality checks and background compatibility reader
+crates/backends/ Rust ChicagoHS wrapper and pinned upstream algorithm
+crates/driver/   transport, calibration, commissioning, installer and VM commands
+fprint/         libfprint TOD adapter, API probe and worker transport tests
+pam/            standard PAM authentication/account probe
+kernel/         BIOS sealed-container reader and DKMS configuration
+guest/          signed-enclave ABI loader and guest bootstrap
+tools/          vendor asset verification, native tests and release checks
+tests/          independent synthetic decoder/protocol/quality references
+data/           service configuration
+docs/           installation, architecture, security and validation records
 ```
 
-The repository contains source, build configuration, documentation and aggregate validation results. Captures, templates, keys, BIOS containers, vendor components and VM disks belong in private local storage. Public issues should contain sanitized hardware and software metadata.
+Captures, prints, keys, BIOS containers, vendor components and VM disks reside
+in private local storage. Public issues contain sanitized metadata.
 
 ## License and credits
 
-User-space implementation: **GNU LGPL v3 or later**, SPDX `LGPL-3.0-or-later`. [License terms](LICENSE.md), [LGPL](COPYING.LESSER), [GPL terms referenced by the LGPL](COPYING), and [third-party notices](THIRD_PARTY_NOTICES.md) are included. The kernel helper's per-file license is documented in `LICENSE.md`.
-
-Research references include the [GXFP51B7 EC discussion](https://github.com/PeshalaDilshan/OpenGoodixSPI/issues/16), [Sigfrodr/libfprint-goodixtls](https://github.com/Sigfrodr/libfprint-goodixtls), [Intel SGX driver](https://github.com/intel/linux-sgx-driver), and [QEMU SGX documentation](https://www.qemu.org/docs/master/system/i386/sgx.html). The matching policy is implemented with Rust array, filtering, FFT and interpolation libraries. The reference projects are credited in the third-party notices.
+Original user-space code uses **LGPL v3 or later**. The kernel helper offers
+**GPL-2.0-only OR LGPL-3.0-or-later**. Vendored ChicagoHS source retains its
+LGPL-2.1-or-later grant. See [license scope](LICENSE.md),
+[third-party notices](THIRD_PARTY_NOTICES.md) and the
+[pinned algorithm provenance](crates/backends/native/UPSTREAM.md).

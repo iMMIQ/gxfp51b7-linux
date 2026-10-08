@@ -93,7 +93,7 @@ impl Records {
         Ok(())
     }
 }
-pub fn ssh(private: &Path, timeout: u32) -> Command {
+pub(crate) fn ssh(private: &Path, timeout: u32) -> Command {
     let mut command = Command::new("/usr/bin/ssh");
     command
         .args([
@@ -123,7 +123,7 @@ pub fn ssh(private: &Path, timeout: u32) -> Command {
         .env("LANG", "C.UTF-8");
     command
 }
-pub fn capture(private: &Path) -> Result<Vec<u8>> {
+pub(crate) fn capture(private: &Path) -> Result<Vec<u8>> {
     super::security::root()?;
     for name in ["id_ed25519", "known_hosts", "chicago-default-config.bin"] {
         super::security::trusted(&private.join(name))?;

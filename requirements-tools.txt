@@ -1,3 +1,5 @@
 -r requirements.txt
 pefile==2024.8.26
 cryptography>=43,<51
+ruff==0.16.10
+clang-format==23.1.2

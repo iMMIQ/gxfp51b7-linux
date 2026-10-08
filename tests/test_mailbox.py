@@ -6,8 +6,7 @@ from mailbox import decode, decode_client_hello, encode
 class ProtocolTests(unittest.TestCase):
     def test_captured_commands(self):
         self.assertEqual(encode(0x90), bytes.fromhex("a00400a490010019"))
-        self.assertEqual(encode(0xA8, bytes.fromhex("70dc")),
-                         bytes.fromhex("a00600a6a8030070dcb3"))
+        self.assertEqual(encode(0xA8, bytes.fromhex("70dc")), bytes.fromhex("a00600a6a8030070dcb3"))
 
     def test_actual_chip_response(self):
         raw = bytes.fromhex("a00600a6900300e0e156")
@@ -43,10 +42,10 @@ class ProtocolTests(unittest.TestCase):
         self.assertEqual(decode_client_hello(packet)["cipher_suites"], ["00ae", "00ff"])
         self.assertIsNone(decode_client_hello(packet[:-1]))
         damaged = bytearray(packet)
-        damaged[4+43] = 255
+        damaged[4 + 43] = 255
         self.assertIsNone(decode_client_hello(damaged))
         damaged = bytearray(packet)
-        damaged[4+45] = 255
+        damaged[4 + 45] = 255
         self.assertIsNone(decode_client_hello(damaged))
 
 
