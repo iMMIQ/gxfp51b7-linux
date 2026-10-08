@@ -2,13 +2,13 @@
 
 [简体中文](README.zh-CN.md) · [Installation](docs/INSTALL.md) · [Design](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md)
 
-Experimental Linux fingerprint acquisition and SDDM authentication for the **Huawei MACHC-WAX9** with ACPI device **GXFP51B7**.
+Linux fingerprint acquisition and SDDM authentication for the **Huawei MACHC-WAX9** with ACPI device **GXFP51B7**.
 
-The implementation was exercised on a real laptop: encrypted image capture, independent same-finger/different-finger comparisons, isolated PAM checks and authentication against the installed SDDM PAM service succeeded. The project provides a hardware-specific capture backend and PAM module for SDDM login. Its current release is experimental.
+The project provides an encrypted capture backend, fingerprint matcher and PAM module for SDDM login.
 
 ## Supported configuration
 
-| Component | Validated configuration |
+| Component | Configuration |
 | --- | --- |
 | Laptop / BIOS | Huawei MACHC-WAX9 / 1.24 |
 | CPU | Intel Core i7-10510U, legacy SGX launch flow |
@@ -17,7 +17,7 @@ The implementation was exercised on a real laptop: encrypted image capture, inde
 | Login manager | SDDM 0.21, Arch `system-login` PAM layout |
 | Isolated runtime | QEMU/KVM 11.1.2, Ubuntu 20.04, kernel `5.4.0-216-generic` |
 
-The table defines the current hardware support and validation scope. Installation checks the machine identity and its ACPI resources against that configuration.
+Installation checks the machine identity and its ACPI resources against this configuration.
 
 ## How it works
 
@@ -40,15 +40,9 @@ These offline checks cover source compilation, packet parsing, image decoding, m
 
 ## Installation and use
 
-Installation combines this repository’s source with user-supplied vendor components, a prepared SGX guest and an SSH identity unique to that guest. The [guide](docs/INSTALL.md) documents preparation, host installation, enrollment, live validation, SDDM enablement and rollback. The installation workflow targets the validated machine and uses locally prepared assets.
+Installation combines this repository’s source with user-supplied vendor components, a prepared SGX guest and an SSH identity unique to that guest. The [guide](docs/INSTALL.md) documents preparation, host installation, enrollment, live validation, SDDM enablement and rollback. The installation workflow targets the MACHC-WAX9 and uses locally prepared assets.
 
 After enrollment and successful live validation, select the enrolled account in SDDM, submit an empty password and touch the enrolled index finger. A mismatch, unavailable backend or timeout falls through to password authentication. Some SDDM themes may require a separate UI adjustment; the tested eos-breeze theme accepts an empty password submission.
-
-## Results and limits
-
-With a frozen threshold of 0.86 and one participant, fresh held-out captures produced **6/6 accepted same-finger presses** and **0/6 accepted presses from three other fingers**. These results describe a small, same-participant comparison. Population false-accept rate, liveness and spoof resistance require further evaluation.
-
-The original deployment's actual SDDM PAM authentication and account checks returned success. Validation covered those authentication and account stages; full desktop session startup remains a follow-up check. The cleaned repository adds parameterized installation/enrollment tools with offline validation. Clean-machine hardware qualification is a next step. The new enrollment flow collects 15 fresh presses, while the original template combined 12 enrollment presses with 3 development presses. Each new template requires its own commissioning and biometric evaluation. See [validation details](docs/VALIDATION.md).
 
 ## Repository
 
