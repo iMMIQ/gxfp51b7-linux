@@ -16,6 +16,6 @@ about: Report a reproducible software or hardware compatibility problem
 
 ## Reproduction and sanitized metadata
 
-Do not attach fingerprints, templates, private keys, BIOS blobs, vendor binaries,
-guest images or decompiled source. Suspected bypasses should use the private
+Share sanitized metadata and reproduction steps. Keep fingerprints, templates,
+private keys, BIOS blobs, vendor components and guest images in private storage. Suspected bypasses should use the private
 reporting route described in SECURITY.md.

@@ -10,4 +10,4 @@ Initial public-source preparation for experimental GXFP51B7 Linux support.
 - Parameterized private-bundle installation, local enrollment, live validation and rollback tools.
 - English/Chinese README, reproduction/design/security documentation and offline CI.
 
-Hardware results apply to the original deployment. Generalized tooling has not been qualified on a second clean installation.
+Hardware results apply to the original deployment. Clean-installation qualification of the generalized tooling is the next validation step.

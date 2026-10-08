@@ -1,11 +1,31 @@
 # Security scope
 
-This experimental implementation adds an authentication route. It has no validated liveness detection, no spoof-resistance qualification and no population false-accept-rate estimate. An accepted correlation is a local comparison result, not proof that a live enrolled person is present.
+This experimental implementation authenticates a local account by comparing a
+captured fingerprint with an enrolled template. Its evidence comes from a small,
+same-participant validation set. Population false-accept rate, liveness detection
+and spoof resistance require further evaluation.
 
-The supported boundary is one local, non-root account on the validated machine with a reviewed guest, original signed enclaves, root-owned runtime/template and the tested SDDM PAM layout. Host root can change code, templates and PAM. A compromised trusted guest can influence returned image data. Hardware SGX is used to access the original communication key; it does not validate the custom host matcher.
+The supported configuration is one local user account on the validated machine,
+with a reviewed guest, original signed enclaves, a root-owned runtime/template
+and the tested SDDM PAM layout. The trusted computing base includes host root,
+the administrator-provided guest and the custom matcher. Host root controls code,
+templates and PAM; the guest influences returned image data. SGX provides access
+to the original communication key, while the host matcher makes the authentication
+decision. A forged fingerprint satisfying that matcher can be accepted.
 
-Normal authentication does not save raw images. Enrollment saves a processed template under `/var/lib/gxfp51b7` with root-only access. The communication key stays inside the vendor enclave. Private keys and BIOS containers must never be attached to public issues. Logs should be reviewed for personal information before sharing.
+Normal authentication processes raw image data in memory. Enrollment stores a
+processed template under `/var/lib/gxfp51b7` with root-private access. The
+communication key stays inside the vendor enclave. Keep private keys, BIOS
+containers, captures and templates in private local storage. Review logs and
+share sanitized metadata when reporting problems.
 
-For suspected authentication bypass or sensitive findings, use GitHub's private vulnerability reporting **if the repository owner has enabled it**, or a private contact published by the owner. If neither exists, open an issue requesting a private contact without disclosing exploit details or sensitive files. Do not invent a reporting address. Maintainers should enable private reporting before public release.
+For suspected authentication bypass or sensitive findings, use GitHub's private
+vulnerability reporting when enabled, or the repository owner's published
+private contact. If a contact is needed, open an issue requesting one and reserve
+the technical findings for that private channel. Maintainers should enable
+private reporting before public release.
 
-The project only modifies a marked SDDM authentication block. Keep a working password and review the documented recovery path before enabling it. Tests and CI do not install or enable authentication.
+Authentication integration uses a marked SDDM block and retains the password
+path. Keep a working password and review the recovery procedure before enabling
+fingerprint login. Tests and CI operate on source and offline fixtures;
+installation and enablement are explicit administrator steps.

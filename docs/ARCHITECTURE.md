@@ -15,7 +15,7 @@ flowchart LR
   P --> L[SDDM / password fallback]
 ```
 
-The communication key is unsealed inside the original vendor enclave. SGX hardware keys bind the guest to the same physical platform; copying the guest to another CPU does not promise successful unsealing. The guest is a compatibility environment for the signed legacy enclave and Intel launch flow, not a full Windows installation.
+The communication key is unsealed inside the original vendor enclave. SGX hardware keys bind unsealing to the same physical platform. The guest provides the compatibility environment for the signed legacy enclave and Intel launch flow.
 
 ## Hardware boundary
 
@@ -24,11 +24,11 @@ The communication key is unsealed inside the original vendor enclave. SGX hardwa
 - DSM GUID: `cc58b68a-4479-4893-a8bb-961209db59e5`, revision 0.
 - DSM 1 provides a 2048-byte buffer declaring an 885-byte sealed container. The host helper accepts only the validated container header and DMI model; its device mode is 0600.
 - DSM 2 rings the EC doorbell through `acpi_call`.
-- Sensor register ID: `0x2504`, ChicagoHS enumeration 12. The empty `0x90` response `e0 e1` is not used as the register sensor ID.
+- Sensor register ID: `0x2504`, ChicagoHS enumeration 12. The empty `0x90` response `e0 e1` is recorded as a separate query response.
 
-The host transport checks DMI, ACPI presence, reserved resource bounds and exclusive access. It refuses a device already bound to a diagnostic driver. The lock protects overlapping capture processes.
+The host transport checks DMI, ACPI presence, reserved resource bounds and exclusive access. Exclusive capture requires the diagnostic driver to be unloaded. The lock protects overlapping capture processes.
 
-TLS uses the observed TLS 1.2 `PSK-AES128-CBC-SHA256` suite. The host forwards records; the original enclave performs cryptographic verification. After the handshake, the bridge submits the validated volatile 256-byte sensor configuration, requires acknowledgement `90 / 01 01`, then submits capture `20 / 01 00`. This does not flash firmware or replace a persistent device key.
+TLS uses the observed TLS 1.2 `PSK-AES128-CBC-SHA256` suite. The host forwards records; the original enclave performs cryptographic verification. After the handshake, the bridge submits the validated volatile 256-byte sensor configuration, requires acknowledgement `90 / 01 01`, then submits capture `20 / 01 00`. The configuration applies to the current capture session; firmware and persistent key state remain as provisioned.
 
 The guest RPC header is three little-endian 32-bit words: magic `0x43505247`, operation and length/status. The bridge bounds record sizes, observes the handshake completion status and accepts the source only after the original component's CRC success and expected final plaintext length. Large mailbox records must be stable for 30 ms before being consumed.
 
@@ -46,6 +46,6 @@ The host PAM helper runs as root because it accesses the protected mailbox, seal
 
 The Python helper requires root-owned non-writable paths, a matching local username/UID, a finite template of the expected shape and the fixed v3 policy/threshold. Root, empty-password and password-locked accounts are rejected. SDDM account/password/session includes remain in place. Shell, nologin, environment and faillock prechecks precede the optional fingerprint branch. A successful fingerprint goes through `pam_faillock authsucc`; the one-module failure jump avoids relying on the expanded length of a PAM include.
 
-QEMU runs as the dedicated non-root `gxfpvm` account. It has no capabilities, a read-only vendor share and restricted user networking with only a loopback SSH port. Its service restricts device access to KVM and virtual EPC, protects the host filesystem and disables core dumps. The SSH client pins the guest host identity and does not use an agent or forwarding.
+QEMU runs as the dedicated non-root `gxfpvm` account. Its service uses an empty capability set, a read-only vendor share and restricted user networking through a loopback SSH port. Its service restricts device access to KVM and virtual EPC, protects the host filesystem and disables core dumps. The SSH client authenticates with its dedicated private key and pins the guest host identity.
 
-This boundary does not protect against a compromised host root account, a malicious administrator-provided guest or a forged fingerprint that satisfies the matcher. See [security scope](../SECURITY.md).
+The trusted computing base includes host root, the administrator-provided guest and the custom matcher. A forged fingerprint satisfying that matcher can be accepted. See [security scope](../SECURITY.md).

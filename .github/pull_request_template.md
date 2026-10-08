@@ -3,6 +3,6 @@
 ## Validation
 
 - [ ] `make check` passed
-- [ ] No private biometric data, keys or vendor binaries included
+- [ ] Changes contain source, documentation and sanitized fixtures
 - [ ] Hardware claims distinguish actual tests from offline checks
 - [ ] Documentation updated for changed installation or authentication behavior

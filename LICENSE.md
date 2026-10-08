@@ -4,11 +4,10 @@ Except for the separately identified kernel helper, this project's original
 code is licensed under the **GNU Lesser General Public License, version 3 or
 any later version**, SPDX `LGPL-3.0-or-later`.
 
-You may redistribute and modify that code under those terms. It is distributed
-without any warranty, including implied warranties of merchantability or
-fitness for a particular purpose. See [COPYING.LESSER](COPYING.LESSER) and
+You may redistribute and modify that code under those terms. The applicable warranty and liability terms are included in the full license
+texts. See [COPYING.LESSER](COPYING.LESSER) and
 [COPYING](COPYING) for the complete terms. The LGPL incorporates portions of
-GPL v3; including GPL v3's text does not change the user-space code to GPL-only.
+GPL v3; the user-space source carries the LGPL-3.0-or-later grant.
 
 The original code under `kernel/` is offered under your choice of
 **GPL-2.0-only OR LGPL-3.0-or-later**. Choose its GPL v2 option when building and
@@ -22,5 +21,7 @@ LGPL-3.0-or-later unless otherwise marked. The authoritative expression for an
 individually marked file is its SPDX notice. External dependencies and vendor
 components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-No vendor enclave, driver DLL, sensor configuration binary, firmware, VM disk,
-private key or biometric template is licensed or distributed by this repository.
+The licensing grant covers the project-authored source and documentation.
+Vendor enclaves, driver DLLs, sensor configuration, firmware and dependencies
+are obtained under their respective distribution terms. Keys, templates and
+guest disks are deployment-specific private assets.
