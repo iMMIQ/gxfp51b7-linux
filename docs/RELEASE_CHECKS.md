@@ -59,5 +59,6 @@ the recorded upstream revision. The libfprint adapter and API probe compile with
 Live checks completed a new 12-stage fprintd enrollment, same-finger acceptance,
 different-finger rejection, empty-sensor timeout and cancellation with worker
 cleanup. Persistent D-Bus activation and isolated standard PAM authentication
-and account checks passed. [Validation](VALIDATION.md) records the dataset and
+and account checks passed. Authentication and account checks against the actual
+SDDM configuration also returned `PAM_SUCCESS` (0). [Validation](VALIDATION.md) records the dataset and
 limits of the measured comparison.
