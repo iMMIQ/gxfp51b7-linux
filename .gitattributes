@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.py text
+*.c text
+*.S text
+*.md text
+*.json text
+COPYING text
+COPYING.LESSER text

@@ -1,0 +1,42 @@
+{
+  "name": "experimental-affine-ncc-v3",
+  "threshold": 0.86,
+  "min_overlap": 1600,
+  "rigid_angles": [
+    -24,
+    -21,
+    -18,
+    -15,
+    -12,
+    -9,
+    -6,
+    -3,
+    0,
+    3,
+    6,
+    9,
+    12,
+    15,
+    18,
+    21,
+    24
+  ],
+  "refine_reference_count": 3,
+  "refine_angle_radius": 2,
+  "refine_angle_step": 1,
+  "axis_scale": [
+    0.94,
+    0.97,
+    1,
+    1.03,
+    1.06
+  ],
+  "shear": [
+    -0.03,
+    0,
+    0.03
+  ],
+  "reference_count": 15,
+  "min_mean_drop": 900,
+  "min_ridge_contrast": 40
+}

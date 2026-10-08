@@ -1,0 +1,38 @@
+[Unit]
+Description=GXFP51B7 isolated fingerprint runtime
+After=systemd-modules-load.service
+Before=display-manager.service
+
+[Service]
+Type=exec
+User=gxfpvm
+Group=gxfpvm
+SupplementaryGroups=kvm sgx
+ExecStart=/usr/bin/python -I /usr/local/lib/gxfp51b7/vm_start.py
+ExecStartPost=+/usr/bin/python -I /usr/local/lib/gxfp51b7/runtime_ready.py
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=55
+TimeoutStopSec=20
+StateDirectory=gxfp51b7-vm
+StateDirectoryMode=0750
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+DevicePolicy=closed
+DeviceAllow=/dev/kvm rw
+DeviceAllow=/dev/sgx_vepc rw
+LimitCORE=0
+
+[Install]
+WantedBy=multi-user.target
