@@ -22,8 +22,10 @@ The TOD driver is installed into the library's `tod-1` directory. The following
 paths correspond to Arch's libfprint-tod package:
 
 ```sh
-sudo install -m 0755 build/gxfp51b7 /usr/local/lib/gxfp51b7/gxfp51b7
-sudo install -Dm0644 build/libfprint-gxfp51b7.so /usr/lib/libfprint-2/tod-1/libfprint-gxfp51b7.so
+sudo install -m 0755 build/gxfp51b7 /usr/local/lib/gxfp51b7/gxfp51b7.new
+sudo mv /usr/local/lib/gxfp51b7/gxfp51b7.new /usr/local/lib/gxfp51b7/gxfp51b7
+sudo install -Dm0644 build/libfprint-gxfp51b7.so /usr/lib/libfprint-2/tod-1/libfprint-gxfp51b7.so.new
+sudo mv /usr/lib/libfprint-2/tod-1/libfprint-gxfp51b7.so.new /usr/lib/libfprint-2/tod-1/libfprint-gxfp51b7.so
 sudo install -Dm0644 data/fprintd-gxfp51b7.conf /etc/systemd/system/fprintd.service.d/gxfp51b7.conf
 sudo systemctl daemon-reload
 sudo systemctl restart fprintd.service
