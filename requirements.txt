@@ -1,3 +1,3 @@
-# Runtime and offline tests. The PAM helper uses the system Python interpreter.
+# Offline Python regression oracle and synthetic cross-language tests.
 numpy>=1.26,<3
 scipy>=1.11,<2

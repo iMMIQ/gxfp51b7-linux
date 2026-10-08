@@ -23,10 +23,13 @@ def main():
         name = raw.decode()
         if name in seen:
             continue
-        seen.add(name)
         path = ROOT / name
+        # Pending Git deletions are absent from the next source release.
+        if not path.exists() and not path.is_symlink():
+            continue
+        seen.add(name)
         if (path.is_symlink() or path.suffix.lower() in FORBIDDEN or
-                any(part in ('private', 'work', 'assets', 'outputs') for part in path.parts) or
+                any(part in ('private', 'work', 'assets', 'outputs') for part in Path(name).parts) or
                 path.name.startswith('id_ed25519') or path.name == 'known_hosts'):
             problems.append(name + ': private/binary path')
             continue

@@ -2,9 +2,9 @@
 
 [English](README.md) · [安装说明](docs/INSTALL.md) · [设计说明](docs/ARCHITECTURE.md) · [验证记录](docs/VALIDATION.md)
 
-为 **华为 MACHC-WAX9 / ACPI GXFP51B7** 实现的 Linux 指纹采集与 SDDM 登录支持。
+为 **华为 MACHC-WAX9 / ACPI GXFP51B7** 使用 Rust 实现的 Linux 指纹采集与 SDDM 登录支持。
 
-项目提供加密采集后端、指纹匹配算法和 PAM 模块，通过 SDDM 使用指纹登录。
+项目提供 Rust 加密采集后端、指纹匹配算法和 PAM 模块，通过 SDDM 使用指纹登录。宿主运行编译后的 Rust 程序，数组处理、滤波、FFT 和插值使用 Rust 库。
 
 ## 适配配置
 
@@ -23,7 +23,7 @@
 
 ## 构建
 
-准备编译器、PAM 开发头文件和 Python 3.11+，然后运行：
+准备 Rust 1.88+、C 编译器、PAM 开发头文件，以及离线工具使用的 Python 3.11+，然后运行：
 
 ```sh
 python3 -m venv .venv
@@ -43,7 +43,7 @@ make check PYTHON=python
 恢复密码登录分支：
 
 ```sh
-sudo /usr/bin/python -I /usr/local/lib/gxfp51b7/manage.py disable
+sudo /usr/local/lib/gxfp51b7/gxfp51b7 disable
 ```
 
 此命令只移除本项目标记的登录分支、禁用指纹配置并停止隔离环境，保留其他登录设置及私有资料。

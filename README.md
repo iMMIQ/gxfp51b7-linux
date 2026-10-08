@@ -2,9 +2,9 @@
 
 [简体中文](README.zh-CN.md) · [Installation](docs/INSTALL.md) · [Design](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md)
 
-Linux fingerprint acquisition and SDDM authentication for the **Huawei MACHC-WAX9** with ACPI device **GXFP51B7**.
+Rust implementation of Linux fingerprint acquisition and SDDM authentication for the **Huawei MACHC-WAX9** with ACPI device **GXFP51B7**.
 
-The project provides an encrypted capture backend, fingerprint matcher and PAM module for SDDM login.
+The project provides an encrypted capture backend, fingerprint matcher and PAM module for SDDM login. Host operation uses a compiled Rust executable and Rust PAM library.
 
 ## Supported configuration
 
@@ -27,7 +27,7 @@ The communication key stays in the vendor enclave. Enrollment templates reside i
 
 ## Build and test
 
-Install a C compiler, PAM development headers, Python 3.11 or newer, NumPy and SciPy, then:
+Install Rust 1.88 or newer, a C compiler, PAM development headers and Python 3.11 or newer for offline tooling, then:
 
 ```sh
 python3 -m venv .venv
@@ -47,14 +47,16 @@ After enrollment and successful live validation, select the enrolled account in 
 ## Repository
 
 ```text
-src/       host transport, image decoder, matcher and root-owned runtime
-pam/       PAM module and explicit authentication probes
-kernel/    read-only BIOS-container helper and DKMS configuration
-guest/     SGX loader, entry assembly and isolated-guest bootstrap
-tools/     vendor verification/export, installation and release inventory check
-tests/     offline protocol, image, matching and PAM configuration tests
-data/      matching policy and hardened systemd unit
-docs/      reproduction, design, test evidence and troubleshooting
+crates/core/    decoder, image processing, affine matcher and NPZ templates
+crates/driver/  Rust CLI, transport, enrollment, installer and VM management
+crates/pam/     Rust PAM authentication module
+pam/           explicit C authentication probes
+kernel/        read-only BIOS-container helper and DKMS configuration
+guest/         enclave ABI loader, entry assembly and guest bootstrap
+tools/         offline vendor verification/export and release checks
+tests/         synthetic parity tests and Python regression references
+data/          matching policy and hardened systemd unit
+docs/          installation, design, validation and troubleshooting
 ```
 
 The repository contains source, build configuration, documentation and aggregate validation results. Captures, templates, keys, BIOS containers, vendor components and VM disks belong in private local storage. Public issues should contain sanitized hardware and software metadata.
@@ -63,4 +65,4 @@ The repository contains source, build configuration, documentation and aggregate
 
 User-space implementation: **GNU LGPL v3 or later**, SPDX `LGPL-3.0-or-later`. [License terms](LICENSE.md), [LGPL](COPYING.LESSER), [GPL terms referenced by the LGPL](COPYING), and [third-party notices](THIRD_PARTY_NOTICES.md) are included. The kernel helper's per-file license is documented in `LICENSE.md`.
 
-Research references include the [GXFP51B7 EC discussion](https://github.com/PeshalaDilshan/OpenGoodixSPI/issues/16), [Sigfrodr/libfprint-goodixtls](https://github.com/Sigfrodr/libfprint-goodixtls), [Intel SGX driver](https://github.com/intel/linux-sgx-driver), and [QEMU SGX documentation](https://www.qemu.org/docs/master/system/i386/sgx.html). The current affine matcher is this project's implementation. The reference projects are credited in the third-party notices.
+Research references include the [GXFP51B7 EC discussion](https://github.com/PeshalaDilshan/OpenGoodixSPI/issues/16), [Sigfrodr/libfprint-goodixtls](https://github.com/Sigfrodr/libfprint-goodixtls), [Intel SGX driver](https://github.com/intel/linux-sgx-driver), and [QEMU SGX documentation](https://www.qemu.org/docs/master/system/i386/sgx.html). The matching policy is implemented with Rust array, filtering, FFT and interpolation libraries. The reference projects are credited in the third-party notices.

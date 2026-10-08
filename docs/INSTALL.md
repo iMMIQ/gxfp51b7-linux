@@ -4,9 +4,9 @@ This is an administrator/researcher workflow for the validated MACHC-WAX9 config
 
 ## 1. Host prerequisites
 
-The tested host uses Arch/EndeavourOS with systemd, SDDM and the `system-login` PAM layout. Install the system Python interpreter at `/usr/bin/python`, NumPy, SciPy, a C toolchain, PAM headers, kernel headers matching the running kernel, DKMS, `acpi_call`, QEMU with SGX/KVM support and OpenSSH. The isolated VM needs `/dev/kvm`, `/dev/sgx_vepc`, 48 MiB free EPC, approximately 1.5 GiB RAM and the `kvm`/`sgx` groups. BIOS SGX must be enabled.
+The tested host uses Arch/EndeavourOS with systemd, SDDM and the `system-login` PAM layout. Install Rust 1.88 or newer, a C toolchain, PAM headers, kernel headers matching the running kernel, DKMS, `acpi_call`, QEMU with SGX/KVM support and OpenSSH. The isolated VM needs `/dev/kvm`, `/dev/sgx_vepc`, 48 MiB free EPC, approximately 1.5 GiB RAM and the `kvm`/`sgx` groups. BIOS SGX must be enabled.
 
-The production helper uses isolated system Python (`python -I`); install its runtime dependencies for that system interpreter.
+The host runtime is the compiled `gxfp51b7` executable and Rust PAM library. Python, NumPy, SciPy, pefile and cryptography support offline preparation and regression checks; install them with `requirements-tools.txt` in a development environment.
 
 Run the offline checks first:
 
@@ -55,7 +55,7 @@ sudo bash bootstrap.sh
 
 `bootstrap.sh` disables cloud-init, removes root authorized keys, restricts SSH to public-key authentication for `ubuntu`, and installs the guest-only module/read-only 9p mount service. Review it before running. The guest requires the normal Ubuntu administrator sudo configuration for `ubuntu`; the capture bridge runs `sudo timeout 12 /home/ubuntu/legacy_load ...` noninteractively. Configure that sudo access for `ubuntu` inside the dedicated guest.
 
-Boot the guest on the same physical machine using the arguments in `src/vm_start.py`: KVM, `host,+sgx,+sgx-tokenkey,-sgxlc`, 48 MiB EPC and loopback TCP port 2228. For initial provisioning, use a private read-only 9p share arranged as:
+Boot the guest on the same physical machine using the arguments in `crates/driver/src/runtime.rs`: KVM, `host,+sgx,+sgx-tokenkey,-sgxlc`, 48 MiB EPC and loopback TCP port 2228. For initial provisioning, use a private read-only 9p share arranged as:
 
 ```text
 guest-share/
@@ -100,28 +100,28 @@ Then install, substituting your own local account:
 
 ```sh
 make
-sudo /usr/bin/python tools/install.py \
+sudo build/gxfp51b7 install \
   --bundle /absolute/private/fingerprint-bundle --user YOUR_ACCOUNT
 sudo systemctl enable --now gxfp51b7-vm.service
 ```
 
-The installer targets a fresh deployment using the tested Arch paths. It copies reviewed code into root-owned directories, creates the dedicated `gxfpvm` service account and installs a separate PAM test service. SDDM enablement is a later step after live validation. Existing deployments require a separate migration plan. Installation writes files in stages; if a preparation error interrupts it, inspect and remove the newly installed project files before retrying.
+The Rust installer targets a fresh deployment using the tested Arch paths. It copies reviewed binaries into root-owned directories, creates the dedicated `gxfpvm` service account and installs a separate PAM test service. SDDM enablement is a later step after live validation. Existing version 0.1 deployments follow the [Rust migration guide](MIGRATING.md). Installation writes files in stages; if a preparation error interrupts it, inspect and remove the newly installed project files before retrying.
 
 ## 5. Enroll and validate
 
 ```sh
-sudo /usr/bin/python -I /usr/local/lib/gxfp51b7/manage.py enroll --user YOUR_ACCOUNT
-sudo /usr/bin/python -I /usr/local/lib/gxfp51b7/manage.py check
+sudo /usr/local/lib/gxfp51b7/gxfp51b7 enroll --user YOUR_ACCOUNT
+sudo /usr/local/lib/gxfp51b7/gxfp51b7 check
 ```
 
-Enrollment captures an empty background and 15 separate presses of the same index finger. Lift the finger fully between presses and vary position slightly. No raw capture is saved; the processed template is root-private. Changing an enrollment requires disabling SDDM fingerprint login first.
+Enrollment captures an empty background and 15 separate presses of the same index finger. Lift the finger fully between presses and vary position slightly. Enrollment processes captures in memory and stores the processed template with root-private access. Templates use compatible `uint16` background and `float64` images in NPZ format. Changing an enrollment requires disabling SDDM fingerprint login first.
 
 The live check asks for an empty sensor, the enrolled finger and three different fingers. It records expected outcomes privately and binds that report to the runtime, PAM module and template digests. Errors or unexpected acceptances stop the sequence. These checks provide local commissioning evidence. Population security evaluation requires a broader participant and attempt set. Collect independent repetitions before routine use.
 
 ## 6. Enable and test SDDM
 
 ```sh
-sudo /usr/bin/python -I /usr/local/lib/gxfp51b7/manage.py enable
+sudo /usr/local/lib/gxfp51b7/gxfp51b7 enable
 sudo /usr/local/lib/gxfp51b7/pam_sddm_probe YOUR_ACCOUNT
 ```
 
@@ -134,7 +134,7 @@ On your next normal login, choose the enrolled account, submit an empty password
 To disable the fingerprint branch:
 
 ```sh
-sudo /usr/bin/python -I /usr/local/lib/gxfp51b7/manage.py disable
+sudo /usr/local/lib/gxfp51b7/gxfp51b7 disable
 ```
 
 It removes only the marked SDDM block, disables the fingerprint configuration and stops/disables the VM. Other PAM edits and the password path remain. The original file is stored at `/var/lib/gxfp51b7/backups/sddm-before-fingerprint`. To re-enable after disablement, start the VM again, enroll, rerun live checks, then enable.

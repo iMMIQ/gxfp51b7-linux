@@ -19,6 +19,24 @@ The original protected runtime completed an in-memory capture in approximately 1
 
 The completed login checks cover SDDM authentication and account stages. Follow-up qualification covers full desktop session startup, desktop lockscreen, sudo, other hardware, newer guest kernels, cross-person controls, spoof attempts and suspend/resume.
 
+## Rust implementation — 2026-10-08
+
+The final Rust implementation reproduces the current v3 policy with library-based
+Gaussian filtering, FFT correlation, affine interpolation and NPZ I/O. It accepts
+the existing enrollment without converting or re-enrolling it. Across the same
+12 independent private captures, every acceptance/rejection matched Python and
+the maximum score difference was `4.44e-16`. These comparisons establish
+implementation continuity on that dataset.
+
+The Rust transport completed a live encrypted capture, verified the enclave's
+integrity result and decoded 5120 pixels. An isolated Rust PAM test rejected an
+empty sensor. A fresh enrolled-finger verification through the Rust executable
+passed the quality gates and scored `0.861181` against the frozen `0.86` threshold.
+The subsequent PAM diagnostic captured an empty sensor throughout its presence
+window and rejected it before matching. Enrolled-finger PAM qualification is
+pending a fresh press held through the same invocation.
+See [release checks](RELEASE_CHECKS.md) for build and parity evidence.
+
 ## Cleaned repository
 
 The current affine matcher and image decoder retain the validated algorithm. License headers, deployment paths, prompts, account parameters and administrator tooling were cleaned for publication. The new tooling uses explicit account and private-bundle parameters and generates a local template during enrollment.
@@ -27,4 +45,4 @@ The public enrollment command collects **15 new separate presses**. The original
 
 Offline tests cover packet checksums and malformed lengths, image nibble order/column layout/padding, bounded translation and deformation, blank/nonfinite images, unrelated synthetic texture, and PAM block insertion/removal with account-name injection and unsupported-layout rejection. Synthetic matcher tests detect mathematical regressions. Biometric security validation uses independent captures and participant controls.
 
-CI builds the PAM module/probes and runs offline checks on Python 3.11–3.13. Kernel and guest compilation are separate local checks. CI operates on source, synthetic fixtures and generated configuration text.
+CI builds the Rust workspace and C probes, checks formatting/Clippy, and runs Rust unit tests, Python reference tests and synthetic cross-language comparisons. Kernel and guest compilation are separate local checks. CI operates on source, synthetic fixtures and generated configuration text.

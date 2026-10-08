@@ -1,16 +1,47 @@
-# Local release preparation checks — 2026-10-08
+# Rust refactor checks — 2026-10-08
 
-The following checks were performed while preparing the initial source repository:
+The Rust workspace provides the host executable, enrollment/administrator
+commands, installer, VM lifecycle commands and PAM authentication library.
+The v3 matching policy and existing NPZ templates carry over to this version.
 
-- `make check`: 24 offline tests passed, PAM module and both probes built with `-Wall -Wextra -Werror`, Python source compiled and guest bootstrap shell syntax checked.
-- `make kernel`: read-only BIOS helper compiled against host kernel `7.2.9-arch1-1`; the check covered compilation.
-- Guest loader and entry assembly compiled against the upstream legacy driver header; the check covered compilation.
-- The new vendor asset exporter was exercised against the locally held validated vendor packages. Its enclave images, signatures and sensor configuration reproduced the original tested bytes. The exporter ran in a temporary private directory, which was removed after byte comparison.
-- Image-decoder and affine-matcher source bodies were compared with the original validated versions; their code bodies match, with updated license notices.
-- CLI help and local documentation links were checked.
-- The release inventory rejected private/binary paths and scanned the tracked text files. The tracked release inventory consists of source, configuration, documentation and license texts.
+## Offline verification
 
-Local Python was 3.14. The committed GitHub Actions workflow specifies Python
-3.11–3.13; hosted job execution begins after GitHub publication. Generalized
-installation/enrollment is the next clean-deployment qualification step. The
-working research deployment retains its validated configuration. See [validation scope](VALIDATION.md).
+- Cargo workspace builds in release mode with the committed lockfile. The
+  workspace also compiles with its minimum Rust version, 1.88.0.
+- Twelve Rust unit tests cover device framing, malformed inputs, decoder layout,
+  blank/invalid images, translation, affine bounds, template round trips,
+  PAM configuration and subprocess deadlines.
+- The 24 Python reference tests pass from `tests/reference`.
+- Seven synthetic cross-language tests compare decoding, Gaussian filtering,
+  quality statistics, affine samples/masks, translation, full 15-reference
+  matching, threshold decisions and NPZ interoperability.
+- A PAM ABI check covers six exported callbacks with null handles and invalid
+  argument counts; these calls return a PAM error.
+- Formatting, Clippy with warnings treated as errors, guest bootstrap syntax,
+  local documentation links and the release inventory check pass.
+
+One sequential synthetic 15-reference search took approximately 6.9 seconds in
+Python and 2.1 seconds in Rust on the validated laptop. Rust reuses probe spectra
+and the library's N-dimensional FFT processor. The timing describes that fixture
+and machine; it is separate from biometric accuracy evidence.
+
+## Hardware and template continuity
+
+The Rust backend completed an encrypted live capture in approximately 1.9 seconds,
+passed the original component's integrity checks and decoded 5120 pixels.
+The pinned guest readiness check passed. An isolated Rust PAM check rejected an
+empty sensor within the configured deadline.
+The Rust executable also accepted a fresh enrolled-finger capture at `0.861181`
+with the existing `0.86` threshold. An enrolled-finger Rust PAM check remains
+the next live qualification step before activating the replacement library.
+
+The final Rust matcher was exercised against the existing private template and
+all 12 independent v3 captures. All six enrolled-finger captures were accepted;
+all six different-finger captures were rejected. Its maximum score difference
+from the frozen Python results was `4.44e-16`. Mean offline Rust scoring time for
+those captures was approximately 2.2 seconds.
+
+The quantitative sample scope is documented in [VALIDATION.md](VALIDATION.md).
+Generalized fresh-install enrollment and full desktop session startup are
+separate deployment qualification steps. Public source contains synthetic
+fixtures and aggregate results; local biometric and guest assets remain private.

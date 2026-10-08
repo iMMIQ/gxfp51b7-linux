@@ -38,14 +38,47 @@ The CRC-validated plaintext has length 10573 bytes; exported source is 10560 byt
 
 The matcher subtracts each capture from its enrollment background, applies Gaussian filters with sigma 0.7 and 2, subtracts those results and crops four pixels per edge to obtain 56×72 values. Presence gates require mean drop at least 900 and ridge contrast at least 40. Matching requires overlap at least 1600 pixels and normalized correlation at least 0.86.
 
-Reference rotations cover −24° through +24° in 3° increments. The three highest-scoring references are refined with angle offsets ±2° at 1° steps, axis scales `{0.94, 0.97, 1, 1.03, 1.06}` and shear `{−0.03, 0, 0.03}`. Translation is bounded to ±30 horizontal and ±24 vertical pixels. Transformed-image masks exclude interpolated padding. The original image decoder and affine matcher algorithms remain unchanged during repository cleanup.
+Reference rotations cover −24° through +24° in 3° increments. The three highest-scoring references are refined with angle offsets ±2° at 1° steps, axis scales `{0.94, 0.97, 1, 1.03, 1.06}` and shear `{−0.03, 0, 0.03}`. Translation is bounded to ±30 horizontal and ±24 vertical pixels. Transformed-image masks exclude interpolated padding. The Rust implementation preserves this policy and NPZ representation. Synthetic parity tests compare its decoder, Gaussian filtering, quality gates, affine sampling and complete search against the Python reference.
 
 ## Privileges and authentication
 
-The host PAM helper runs as root because it accesses the protected mailbox, sealed container and template. It accepts only the explicit PAM `user=` account, executes a fixed helper under isolated Python with a sanitized environment, suppresses capture output, disables core dumps and bounds the subprocess group to 15 seconds. Nonzero exits, signals and timeouts return authentication unavailable; the PAM configuration continues to the original password path.
+The host PAM helper runs as root because it accesses the protected mailbox, sealed container and template. It accepts only the explicit PAM `user=` account, executes the fixed Rust helper with a sanitized environment, suppresses capture output, disables core dumps and bounds the subprocess group to 15 seconds. Nonzero exits, signals and timeouts return authentication unavailable; the PAM configuration continues to the original password path.
 
-The Python helper requires root-owned non-writable paths, a matching local username/UID, a finite template of the expected shape and the fixed v3 policy/threshold. Root, empty-password and password-locked accounts are rejected. SDDM account/password/session includes remain in place. Shell, nologin, environment and faillock prechecks precede the optional fingerprint branch. A successful fingerprint goes through `pam_faillock authsucc`; the one-module failure jump avoids relying on the expanded length of a PAM include.
+The Rust helper requires root-owned non-writable paths, a matching local username/UID, a finite template of the expected shape and the fixed v3 policy/threshold. Root, empty-password and password-locked accounts are rejected. SDDM account/password/session includes remain in place. Shell, nologin, environment and faillock prechecks precede the optional fingerprint branch. A successful fingerprint goes through `pam_faillock authsucc`; the one-module failure jump avoids relying on the expanded length of a PAM include.
 
 QEMU runs as the dedicated non-root `gxfpvm` account. Its service uses an empty capability set, a read-only vendor share and restricted user networking through a loopback SSH port. Its service restricts device access to KVM and virtual EPC, protects the host filesystem and disables core dumps. The SSH client authenticates with its dedicated private key and pins the guest host identity.
 
 The trusted computing base includes host root, the administrator-provided guest and the custom matcher. A forged fingerprint satisfying that matcher can be accepted. See [security scope](../SECURITY.md).
+
+## Rust components and library boundaries
+
+The Cargo workspace has three packages. `gxfp-core` handles decoding, image
+preparation, matching and template I/O. `gxfp51b7` provides device transport,
+account checks, enrollment, commissioning, installation and VM lifecycle commands.
+`pam-gxfp51b7` builds a `cdylib` with Linux-PAM entrypoints through `pam-bindings`.
+
+| Library | Responsibility |
+| --- | --- |
+| `ndarray` | Typed arrays and array views |
+| `ndarray-ndimage` | Gaussian filters with reflected boundaries |
+| `ndarray-conv` / `rustfft` | N-dimensional FFT processors, cached probe spectra and transform plans |
+| `interpn` | Batched bilinear affine sampling |
+| `ndarray-npy` | NPZ template compatibility |
+| `pam-bindings` | PAM hooks, account lookup and conversation |
+| `clap`, `serde`, `serde_json` | Commands and configuration |
+| `nix`, `rustix`, `memmap2`, `wait-timeout` | Unix privileges, raw mapping and process deadlines |
+| `tempfile`, `sha2` | Atomic private writes and validation digests |
+
+Device-specific code describes packet framing, the enclave RPC, volatile mailbox
+access and the fixed comparison policy. Raw mapping pointers are encapsulated in
+`Mailbox`; bounded volatile accesses observe EC updates. The helper checks the
+expected platform and reserved resource before opening that mapping.
+
+The kernel helper remains a small C module using the supported kernel API. The
+guest loader uses C and assembly for the signed enclave's legacy entry ABI.
+Python code under `tests/reference` provides the regression oracle; `tools` uses
+PE parsing and cryptographic libraries to prepare vendor assets offline.
+
+The PAM library waits through a Linux process descriptor using `rustix` and `nix`
+polling. Its wait state belongs to each authentication invocation, allowing PAM
+to unload the module while the client retains its own signal handling.

@@ -9,7 +9,7 @@ about: Report a reproducible software or hardware compatibility problem
 
 - Laptop model / BIOS:
 - ACPI device ID:
-- Host distribution / kernel / Python:
+- Host distribution / kernel / driver version:
 - QEMU / guest kernel:
 - SDDM / PAM layout:
 - Commit:
