@@ -64,11 +64,14 @@ vendor algorithm boundaries remain explicit and documented.
 
 The strongest remaining limits concern deployment and biometric evidence. The
 live ChicagoHS evidence covers one machine and one participant, and the 42
-private-oracle native cases require external fixtures. The revised v0.3 fresh
-installation, calibration and commissioning sequence needs a complete hardware
-run before deployment. Its offline tests establish parser/format compatibility
-and software behavior. The hardware-qualified v0.2 installation continues to
-provide the current login path during this source cleanup.
+private-oracle native cases require external fixtures. The v0.3 migrated
+deployment passed Rust VM restart/readiness, encrypted capture, existing-print
+authentication, new JSON calibration, 12-stage enrollment, empty/same/middle/ring
+PAM controls and cancellation cleanup. The operator concluded testing after the
+ring-finger control; the full five-case report and a new SDDM-specific probe remain
+follow-up checks. The existing standard SDDM branch was restored, and v0.3 now
+supplies the fingerprint path. A clean-host installation with a newly prepared
+bundle requires its own end-to-end run.
 
 [VALIDATION.md](VALIDATION.md) records the measured comparison, live fprintd/PAM
 results and the scope of the biometric evidence. General false-accept rates,

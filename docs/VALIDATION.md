@@ -1,6 +1,46 @@
 # Validation evidence
 
-## Deployed ChicagoHS login — 2026-10-08
+## Deployed v0.3 runtime — 2026-10-08
+
+The MACHC-WAX9 deployment was upgraded from v0.2 to source revision `6efa076`
+(v0.3.0). The installed helper, TOD adapter and PAM probes use the reviewed build.
+The VM service now starts QEMU and checks guest readiness through the Rust
+executable. Root-private recovery copies preserve the previous configuration,
+binaries, calibration and enrollment.
+
+The Rust VM service restarted successfully and remains enabled. An encrypted
+empty-sensor capture passed integrity checks and decoded 5120 pixels from 10560
+source bytes in approximately 1.29 seconds. Standard PAM accepted the existing
+fprintd enrollment. Empty-sensor authentication returned `PAM_AUTHINFO_UNAVAIL`
+(9). Cancelling a standard fprintd verification released the device, left zero
+workers and permitted immediate enrollment enumeration.
+
+The v0.3 calibration command stored a new 5120-pixel, twelve-bit background in
+root-owned mode-0600 JSON and bound the local account. A new guided fprintd
+right-index-finger enrollment completed all 12 accepted positions and persisted
+a new root-private print. The administrator check observed:
+
+| Fresh enrollment control | PAM result | Observed behavior |
+| --- | ---: | --- |
+| Empty sensor | 9 | Authentication unavailable |
+| Enrolled index finger | 0 | Authentication and account checks succeeded |
+| Different middle finger | 11 | One mismatch exhausted the configured attempt |
+| Different ring finger | 11 | One mismatch exhausted the configured attempt |
+
+The operator chose to conclude testing after the ring-finger control. The
+little-finger control, completion of the five-case commissioning report and a
+new SDDM-specific probe remain follow-up checks. The established standard
+`pam_fprintd` SDDM branch was restored from the saved configuration, preserving
+the password, account and session paths. The installed v0.3 runtime supplies the
+current fingerprint path. Full desktop session startup is checked during a
+normal user login.
+
+Fifteen retired Python/custom-PAM runtime files and obsolete test services were
+archived in the root-private recovery snapshot. The live deployment uses Rust
+VM/capture commands, JSON calibration and standard fprintd/PAM. Signed guest
+components and the existing pinned guest identity remain part of the runtime.
+
+## Previous v0.2 ChicagoHS deployment — 2026-10-08
 
 The deployed v0.2 implementation uses the Rust capture worker, ChicagoHS selector
 207, libfprint TOD, official fprintd and standard `pam_fprintd`. The test machine
@@ -37,10 +77,11 @@ custom PAM implementation are available in Git history.
 The source checks are recorded in [RELEASE_CHECKS.md](RELEASE_CHECKS.md). They
 cover compilation, malformed input, worker event order and cancellation,
 background compatibility, independent decoding/quality calculations, lint,
-formatting, dependency auditing and release contents. The currently installed
-v0.2 login remains the hardware-qualified deployment. A v0.3 deployment requires
-its own live commissioning with `gxfp51b7 check` before enablement; the revised
-fresh-install/calibration workflow requires an end-to-end hardware run.
+formatting, dependency auditing and release contents. The deployed v0.3 hardware run is recorded above. Fresh deployments use the
+complete `gxfp51b7 check` sequence before administrator enablement. A clean-host
+installation with a newly prepared private bundle requires a separate end-to-end
+run; this machine exercised migration, calibration, enrollment and the completed
+PAM controls.
 
 ## Matcher comparison — 2026-10-08
 
