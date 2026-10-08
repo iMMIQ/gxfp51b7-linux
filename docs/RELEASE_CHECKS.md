@@ -45,3 +45,19 @@ The quantitative sample scope is documented in [VALIDATION.md](VALIDATION.md).
 Generalized fresh-install enrollment and full desktop session startup are
 separate deployment qualification steps. Public source contains synthetic
 fixtures and aggregate results; local biometric and guest assets remain private.
+
+## ChicagoHS and fprintd checks
+
+The extended workspace compiles with Rust 1.88.0. Its 15 Rust tests include native
+context ownership/input rejection, blank RootSIFT evidence and truncated,
+oversized or unsupported private print frames. The pinned ChicagoHS native suite
+has 103 registered cases across seven programs: 61 synthetic cases pass and
+42 optional private-oracle cases are skipped. Source hashes match 29 files from
+the recorded upstream revision. The libfprint adapter and API probe compile with
+`-Wall -Wextra -Werror`.
+
+Live checks completed a new 12-stage fprintd enrollment, same-finger acceptance,
+different-finger rejection, empty-sensor timeout and cancellation with worker
+cleanup. Persistent D-Bus activation and isolated standard PAM authentication
+and account checks passed. [Validation](VALIDATION.md) records the dataset and
+limits of the measured comparison.

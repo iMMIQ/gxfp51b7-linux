@@ -5,7 +5,7 @@ PYTHON ?= python3
 CFLAGS ?= -O2 -Wall -Wextra -Werror
 BUILD := build
 
-.PHONY: all rust test check clean kernel
+.PHONY: all rust fprint native-test test check clean kernel
 all: rust $(BUILD)/pam_probe $(BUILD)/pam_sddm_probe
 
 $(BUILD):
@@ -22,7 +22,18 @@ $(BUILD)/pam_probe: pam/pam_probe.c | $(BUILD)
 $(BUILD)/pam_sddm_probe: pam/pam_probe.c | $(BUILD)
 	$(CC) $(CFLAGS) -DGXFP_PAM_SERVICE='"sddm"' $< -lpam -o $@
 
-test: all
+fprint: $(BUILD)/libfprint-gxfp51b7.so $(BUILD)/fprint_probe
+
+$(BUILD)/libfprint-gxfp51b7.so: fprint/gxfp51b7.c | $(BUILD)
+	$(CC) $(CFLAGS) -fPIC -shared $< $$(pkg-config --cflags --libs libfprint-2-tod-1 libfprint-2 gio-2.0) -o $@
+
+$(BUILD)/fprint_probe: fprint/probe.c | $(BUILD)
+	$(CC) $(CFLAGS) $< $$(pkg-config --cflags --libs libfprint-2 gio-2.0) -o $@
+
+native-test:
+	$(PYTHON) tools/test_native.py
+
+test: all native-test
 	$(CARGO) test --workspace --locked
 	PYTHONPATH=tests/reference $(PYTHON) -m unittest discover -s tests -p 'test_*.py' -v
 	$(PYTHON) tests/parity.py

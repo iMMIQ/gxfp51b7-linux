@@ -7,6 +7,7 @@ LGPL-3.0-or-later; the kernel helper follows its per-file dual license.
 
 | Crate | Version | SPDX license |
 | --- | --- | --- |
+| [aho-corasick](https://docs.rs/crate/aho-corasick/1.1.5) | 1.1.5 | Unlicense OR MIT |
 | [anstream](https://docs.rs/crate/anstream/1.0.0) | 1.0.0 | MIT OR Apache-2.0 |
 | [anstyle](https://docs.rs/crate/anstyle/1.0.14) | 1.0.14 | MIT OR Apache-2.0 |
 | [anstyle-parse](https://docs.rs/crate/anstyle-parse/1.0.0) | 1.0.0 | MIT OR Apache-2.0 |
@@ -21,8 +22,11 @@ LGPL-3.0-or-later; the kernel helper follows its per-file dual license.
 | [bumpalo](https://docs.rs/crate/bumpalo/3.20.3) | 3.20.3 | MIT OR Apache-2.0 |
 | [byteorder](https://docs.rs/crate/byteorder/1.5.0) | 1.5.0 | Unlicense OR MIT |
 | [castaway](https://docs.rs/crate/castaway/0.2.4) | 0.2.4 | MIT |
+| [cc](https://docs.rs/crate/cc/1.6.0) | 1.6.0 | MIT OR Apache-2.0 |
 | [cfg-if](https://docs.rs/crate/cfg-if/1.0.5) | 1.0.5 | MIT OR Apache-2.0 |
 | [cfg_aliases](https://docs.rs/crate/cfg_aliases/0.2.2) | 0.2.2 | MIT |
+| [clang](https://docs.rs/crate/clang/2.1.0) | 2.1.0 | Apache-2.0 |
+| [clang-sys](https://docs.rs/crate/clang-sys/1.9.1) | 1.9.1 | Apache-2.0 |
 | [clap](https://docs.rs/crate/clap/4.6.7) | 4.6.7 | MIT OR Apache-2.0 |
 | [clap_builder](https://docs.rs/crate/clap_builder/4.6.7) | 4.6.7 | MIT OR Apache-2.0 |
 | [clap_derive](https://docs.rs/crate/clap_derive/4.6.7) | 4.6.7 | MIT OR Apache-2.0 |
@@ -37,14 +41,17 @@ LGPL-3.0-or-later; the kernel helper follows its per-file dual license.
 | [crypto-common](https://docs.rs/crate/crypto-common/0.1.7) | 0.1.7 | MIT OR Apache-2.0 |
 | [derive_arbitrary](https://docs.rs/crate/derive_arbitrary/1.5.0) | 1.5.0 | MIT OR Apache-2.0 |
 | [digest](https://docs.rs/crate/digest/0.10.7) | 0.10.7 | MIT OR Apache-2.0 |
+| [dunce](https://docs.rs/crate/dunce/1.0.5) | 1.0.5 | CC0-1.0 OR MIT-0 OR Apache-2.0 |
 | [either](https://docs.rs/crate/either/1.19.0) | 1.19.0 | MIT OR Apache-2.0 |
 | [equivalent](https://docs.rs/crate/equivalent/1.0.2) | 1.0.2 | Apache-2.0 OR MIT |
 | [errno](https://docs.rs/crate/errno/0.3.14) | 0.3.14 | MIT OR Apache-2.0 |
 | [fastrand](https://docs.rs/crate/fastrand/2.5.0) | 2.5.0 | Apache-2.0 OR MIT |
+| [find-msvc-tools](https://docs.rs/crate/find-msvc-tools/0.1.14) | 0.1.14 | MIT OR Apache-2.0 |
 | [flate2](https://docs.rs/crate/flate2/1.1.10) | 1.1.10 | MIT OR Apache-2.0 |
 | [generic-array](https://docs.rs/crate/generic-array/0.14.7) | 0.14.7 | MIT |
 | [getrandom](https://docs.rs/crate/getrandom/0.2.17) | 0.2.17 | MIT OR Apache-2.0 |
 | [getrandom](https://docs.rs/crate/getrandom/0.4.3) | 0.4.3 | MIT OR Apache-2.0 |
+| [glob](https://docs.rs/crate/glob/0.3.4) | 0.3.4 | MIT OR Apache-2.0 |
 | [hashbrown](https://docs.rs/crate/hashbrown/0.17.1) | 0.17.1 | MIT OR Apache-2.0 |
 | [heck](https://docs.rs/crate/heck/0.5.0) | 0.5.0 | MIT OR Apache-2.0 |
 | [hermit-abi](https://docs.rs/crate/hermit-abi/0.5.3) | 0.5.3 | MIT OR Apache-2.0 |
@@ -54,7 +61,9 @@ LGPL-3.0-or-later; the kernel helper follows its per-file dual license.
 | [itertools](https://docs.rs/crate/itertools/0.13.0) | 0.13.0 | MIT OR Apache-2.0 |
 | [itertools](https://docs.rs/crate/itertools/0.15.0) | 0.15.0 | MIT OR Apache-2.0 |
 | [itoa](https://docs.rs/crate/itoa/1.0.18) | 1.0.18 | MIT OR Apache-2.0 |
+| [jobserver](https://docs.rs/crate/jobserver/0.1.35) | 0.1.35 | MIT OR Apache-2.0 |
 | [libc](https://docs.rs/crate/libc/0.2.190) | 0.2.190 | MIT OR Apache-2.0 |
+| [libloading](https://docs.rs/crate/libloading/0.8.9) | 0.8.9 | ISC |
 | [libm](https://docs.rs/crate/libm/0.2.16) | 0.2.16 | MIT |
 | [linux-raw-sys](https://docs.rs/crate/linux-raw-sys/0.12.1) | 0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | [log](https://docs.rs/crate/log/0.4.34) | 0.4.34 | MIT OR Apache-2.0 |
@@ -78,11 +87,15 @@ LGPL-3.0-or-later; the kernel helper follows its per-file dual license.
 | [num_cpus](https://docs.rs/crate/num_cpus/1.17.0) | 1.17.0 | MIT OR Apache-2.0 |
 | [once_cell](https://docs.rs/crate/once_cell/1.21.4) | 1.21.4 | MIT OR Apache-2.0 |
 | [once_cell_polyfill](https://docs.rs/crate/once_cell_polyfill/1.70.2) | 1.70.2 | MIT OR Apache-2.0 |
+| [opencv](https://docs.rs/crate/opencv/0.101.0) | 0.101.0 | MIT |
+| [opencv-binding-generator](https://docs.rs/crate/opencv-binding-generator/0.106.0) | 0.106.0 | MIT |
 | [pam-bindings](https://docs.rs/crate/pam-bindings/0.3.0) | 0.3.0 | MIT |
+| [percent-encoding](https://docs.rs/crate/percent-encoding/2.3.2) | 2.3.2 | MIT OR Apache-2.0 |
 | [pest](https://docs.rs/crate/pest/2.9.2) | 2.9.2 | MIT OR Apache-2.0 |
 | [pest_derive](https://docs.rs/crate/pest_derive/2.9.2) | 2.9.2 | MIT OR Apache-2.0 |
 | [pest_generator](https://docs.rs/crate/pest_generator/2.9.2) | 2.9.2 | MIT OR Apache-2.0 |
 | [pest_meta](https://docs.rs/crate/pest_meta/2.9.2) | 2.9.2 | MIT OR Apache-2.0 |
+| [pkg-config](https://docs.rs/crate/pkg-config/0.3.34) | 0.3.34 | MIT OR Apache-2.0 |
 | [portable-atomic](https://docs.rs/crate/portable-atomic/1.15.0) | 1.15.0 | Apache-2.0 OR MIT |
 | [portable-atomic-util](https://docs.rs/crate/portable-atomic-util/0.2.8) | 0.2.8 | Apache-2.0 OR MIT |
 | [ppv-lite86](https://docs.rs/crate/ppv-lite86/0.2.21) | 0.2.21 | MIT OR Apache-2.0 |
@@ -98,14 +111,19 @@ LGPL-3.0-or-later; the kernel helper follows its per-file dual license.
 | [rayon](https://docs.rs/crate/rayon/1.12.0) | 1.12.0 | MIT OR Apache-2.0 |
 | [rayon-core](https://docs.rs/crate/rayon-core/1.13.0) | 1.13.0 | MIT OR Apache-2.0 |
 | [realfft](https://docs.rs/crate/realfft/3.5.0) | 3.5.0 | MIT |
+| [regex](https://docs.rs/crate/regex/1.13.1) | 1.13.1 | MIT OR Apache-2.0 |
+| [regex-automata](https://docs.rs/crate/regex-automata/0.4.18) | 0.4.18 | MIT OR Apache-2.0 |
+| [regex-syntax](https://docs.rs/crate/regex-syntax/0.8.11) | 0.8.11 | MIT OR Apache-2.0 |
 | [rustfft](https://docs.rs/crate/rustfft/6.4.1) | 6.4.1 | MIT OR Apache-2.0 |
 | [rustix](https://docs.rs/crate/rustix/1.1.5) | 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
 | [rustversion](https://docs.rs/crate/rustversion/1.0.23) | 1.0.23 | MIT OR Apache-2.0 |
+| [semver](https://docs.rs/crate/semver/1.0.28) | 1.0.28 | MIT OR Apache-2.0 |
 | [serde](https://docs.rs/crate/serde/1.0.229) | 1.0.229 | MIT OR Apache-2.0 |
 | [serde_core](https://docs.rs/crate/serde_core/1.0.229) | 1.0.229 | MIT OR Apache-2.0 |
 | [serde_derive](https://docs.rs/crate/serde_derive/1.0.229) | 1.0.229 | MIT OR Apache-2.0 |
 | [serde_json](https://docs.rs/crate/serde_json/1.0.151) | 1.0.151 | MIT OR Apache-2.0 |
 | [sha2](https://docs.rs/crate/sha2/0.10.9) | 0.10.9 | MIT OR Apache-2.0 |
+| [shlex](https://docs.rs/crate/shlex/2.0.1) | 2.0.1 | MIT OR Apache-2.0 |
 | [simd-adler32](https://docs.rs/crate/simd-adler32/0.3.10) | 0.3.10 | MIT |
 | [strength_reduce](https://docs.rs/crate/strength_reduce/0.2.4) | 0.2.4 | MIT OR Apache-2.0 |
 | [strsim](https://docs.rs/crate/strsim/0.11.1) | 0.11.1 | MIT |
@@ -119,11 +137,23 @@ LGPL-3.0-or-later; the kernel helper follows its per-file dual license.
 | [ucd-trie](https://docs.rs/crate/ucd-trie/0.1.7) | 0.1.7 | MIT OR Apache-2.0 |
 | [unicode-ident](https://docs.rs/crate/unicode-ident/1.0.26) | 1.0.26 | (MIT OR Apache-2.0) AND Unicode-3.0 |
 | [utf8parse](https://docs.rs/crate/utf8parse/0.2.2) | 0.2.2 | Apache-2.0 OR MIT |
+| [vcpkg](https://docs.rs/crate/vcpkg/0.2.15) | 0.2.15 | MIT/Apache-2.0 |
 | [version_check](https://docs.rs/crate/version_check/0.9.5) | 0.9.5 | MIT/Apache-2.0 |
 | [wait-timeout](https://docs.rs/crate/wait-timeout/0.2.1) | 0.2.1 | MIT/Apache-2.0 |
 | [wasi](https://docs.rs/crate/wasi/0.11.1+wasi-snapshot-preview1) | 0.11.1+wasi-snapshot-preview1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT |
+| [windows](https://docs.rs/crate/windows/0.62.2) | 0.62.2 | MIT OR Apache-2.0 |
+| [windows-collections](https://docs.rs/crate/windows-collections/0.3.2) | 0.3.2 | MIT OR Apache-2.0 |
+| [windows-core](https://docs.rs/crate/windows-core/0.62.2) | 0.62.2 | MIT OR Apache-2.0 |
+| [windows-future](https://docs.rs/crate/windows-future/0.3.2) | 0.3.2 | MIT OR Apache-2.0 |
+| [windows-implement](https://docs.rs/crate/windows-implement/0.60.2) | 0.60.2 | MIT OR Apache-2.0 |
+| [windows-interface](https://docs.rs/crate/windows-interface/0.59.3) | 0.59.3 | MIT OR Apache-2.0 |
 | [windows-link](https://docs.rs/crate/windows-link/0.2.1) | 0.2.1 | MIT OR Apache-2.0 |
+| [windows-numerics](https://docs.rs/crate/windows-numerics/0.3.1) | 0.3.1 | MIT OR Apache-2.0 |
+| [windows-result](https://docs.rs/crate/windows-result/0.4.1) | 0.4.1 | MIT OR Apache-2.0 |
+| [windows-strings](https://docs.rs/crate/windows-strings/0.5.1) | 0.5.1 | MIT OR Apache-2.0 |
 | [windows-sys](https://docs.rs/crate/windows-sys/0.61.2) | 0.61.2 | MIT OR Apache-2.0 |
+| [windows-threading](https://docs.rs/crate/windows-threading/0.2.1) | 0.2.1 | MIT OR Apache-2.0 |
+| [winsplit](https://docs.rs/crate/winsplit/0.1.0) | 0.1.0 | MIT OR Apache-2.0 |
 | [zerocopy](https://docs.rs/crate/zerocopy/0.8.61) | 0.8.61 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | [zerocopy-derive](https://docs.rs/crate/zerocopy-derive/0.8.61) | 0.8.61 | BSD-2-Clause OR Apache-2.0 OR MIT |
 | [zeroize](https://docs.rs/crate/zeroize/1.9.1) | 1.9.1 | Apache-2.0 OR MIT |

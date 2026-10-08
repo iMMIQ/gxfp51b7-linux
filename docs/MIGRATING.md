@@ -55,3 +55,11 @@ For a failed migration, restore the saved PAM module and service unit, reload
 systemd and restart the fingerprint VM. The saved source remains available for
 that earlier deployment. Complete recovery and removal steps are in
 [the installation guide](INSTALL.md#recovery-and-removal).
+
+## ChicagoHS and standard PAM
+
+The [fprintd guide](FPRINTD.md) covers the ChicagoHS path. It reuses the
+commissioned EC/enclave runtime, captures a fresh calibration background,
+collects 12 accepted positions and stores the completed print through fprintd.
+The standard PAM path has its own isolated and SDDM checks. Keep its saved PAM
+configuration available when switching between the two login paths.

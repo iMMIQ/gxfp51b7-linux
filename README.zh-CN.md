@@ -1,10 +1,10 @@
 # GXFP51B7 Linux
 
-[English](README.md) · [安装说明](docs/INSTALL.md) · [设计说明](docs/ARCHITECTURE.md) · [验证记录](docs/VALIDATION.md)
+[English](README.md) · [安装说明](docs/INSTALL.md) · [fprintd 接入](docs/FPRINTD.md) · [设计说明](docs/ARCHITECTURE.md) · [验证记录](docs/VALIDATION.md)
 
 为 **华为 MACHC-WAX9 / ACPI GXFP51B7** 使用 Rust 实现的 Linux 指纹采集与 SDDM 登录支持。
 
-项目提供 Rust 加密采集后端、指纹匹配算法和 PAM 模块，通过 SDDM 使用指纹登录。宿主运行编译后的 Rust 程序，数组处理、滤波、FFT 和插值使用 Rust 库。
+项目通过 Rust 加密采集后端和 ChicagoHS 匹配器接入 libfprint TOD 与 fprintd，由标准 pam_fprintd 完成 SDDM 登录认证。Rust 仿射匹配器和 PAM 模块提供现有部署路径与离线对照。
 
 ## 适配配置
 
@@ -23,20 +23,22 @@
 
 ## 构建
 
-准备 Rust 1.88+、C 编译器、PAM 开发头文件，以及离线工具使用的 Python 3.11+，然后运行：
+准备 Rust 1.88+、C 编译器、GLib/GIO、OpenCV 4 或 5、libclang、pkg-config、PAM 开发头文件，以及离线工具使用的 Python 3.11+，然后运行：
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-tools.txt
 make check PYTHON=python
+# 准备 libfprint TOD 开发头文件后：
+make fprint
 ```
 
 离线检查覆盖编译、协议解析、图像解码、匹配计算和 PAM 配置生成。
 
 ## 安装与使用
 
-安装使用仓库源码，以及自行准备的原厂组件、隔离虚拟机和通信身份。指纹模板在本机录入时生成。请依照[安装说明](docs/INSTALL.md)完成隔离环境准备、安装、录入和对照验证。
+安装使用仓库源码，以及自行准备的原厂组件、隔离虚拟机和通信身份。指纹模板在本机录入时生成。[fprintd 接入说明](docs/FPRINTD.md)介绍 ChicagoHS 的 12 步录入与标准登录配置。请依照[安装说明](docs/INSTALL.md) · [fprintd 接入](docs/FPRINTD.md)完成隔离环境准备、安装、录入和对照验证。
 
 接入后，在 SDDM 选择录入的账户，留空密码并提交登录，再轻触已录入的食指。识别失败或超时后可继续使用密码。
 

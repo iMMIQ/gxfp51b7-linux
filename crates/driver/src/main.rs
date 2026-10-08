@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 mod admin;
 mod capture;
+mod comparison;
+mod fprint;
 mod install;
 mod mailbox;
 mod runtime;
@@ -68,6 +70,19 @@ enum Commands {
     },
     /// Check encrypted capture and decoding, returning aggregate metadata.
     CaptureCheck,
+    /// Root-only libfprint worker; print bytes travel through private pipes.
+    FprintWorker {
+        user: String,
+        #[arg(long)]
+        enroll: bool,
+    },
+    /// Validate the installed device for the libfprint adapter.
+    FprintProbe,
+    /// Compare frozen NCC, ChicagoHS and RootSIFT on a private offline dataset.
+    Compare {
+        #[arg(long)]
+        manifest: PathBuf,
+    },
     /// Evaluate mathematical operations from JSON on stdin (offline testing).
     Evaluate,
 }
@@ -202,6 +217,9 @@ fn run(command: Commands) -> Result<()> {
         } => install::install(&bundle, &user, &source)?,
         Commands::VmStart => runtime::start()?,
         Commands::RuntimeReady => runtime::ready()?,
+        Commands::FprintWorker { user, enroll } => fprint::run(&user, enroll)?,
+        Commands::FprintProbe => fprint::probe()?,
+        Commands::Compare { manifest } => comparison::run(&manifest)?,
         Commands::Evaluate => println!("{}", evaluate()?),
         Commands::Score { template, source } => {
             let t = Template::read(fs::File::open(template)?)?;
