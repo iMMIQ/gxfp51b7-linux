@@ -30,7 +30,12 @@ implementation continuity on that dataset.
 
 The Rust transport completed a live encrypted capture, verified the enclave's
 integrity result and decoded 5120 pixels. An isolated Rust PAM test rejected an
-empty sensor. See [release checks](RELEASE_CHECKS.md) for build and parity evidence.
+empty sensor. A fresh enrolled-finger verification through the Rust executable
+passed the quality gates and scored `0.861181` against the frozen `0.86` threshold.
+The subsequent PAM diagnostic captured an empty sensor throughout its presence
+window and rejected it before matching. Enrolled-finger PAM qualification is
+pending a fresh press held through the same invocation.
+See [release checks](RELEASE_CHECKS.md) for build and parity evidence.
 
 ## Cleaned repository
 

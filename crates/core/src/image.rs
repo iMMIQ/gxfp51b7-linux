@@ -12,12 +12,16 @@ pub fn decode(source: &[u8]) -> Result<Vec<u16>> {
     let source = if source.len() == 10560 {
         ensure!(
             source
-                .chunks_exact(132)
+                .as_chunks::<132>()
+                .0
+                .iter()
                 .all(|c| c[96..].iter().all(|&x| x == 0)),
             "Nonzero image padding"
         );
         packed = source
-            .chunks_exact(132)
+            .as_chunks::<132>()
+            .0
+            .iter()
             .flat_map(|c| c[..96].iter().copied())
             .collect::<Vec<_>>();
         &packed[..]
@@ -26,8 +30,8 @@ pub fn decode(source: &[u8]) -> Result<Vec<u16>> {
         source
     };
     let mut pixels = vec![0; PIXELS];
-    for (i, c) in source.chunks_exact(6).enumerate() {
-        let [a, b, c, d, e, f] = <[u8; 6]>::try_from(c)?;
+    for (i, c) in source.as_chunks::<6>().0.iter().enumerate() {
+        let [a, b, c, d, e, f] = *c;
         let values = [
             u16::from(a & 15) * 256 + u16::from(b),
             u16::from(d) * 16 + u16::from(a >> 4),

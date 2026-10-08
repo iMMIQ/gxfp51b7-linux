@@ -30,7 +30,11 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Authenticate the enrolled account; exit 0 = match, 1 = mismatch, 2 = backend error.
-    Verify { user: String },
+    Verify {
+        user: String,
+        #[arg(long)]
+        diagnostic: bool,
+    },
     /// Capture a background and fifteen independent fingerprint references.
     Enroll {
         #[arg(long)]
@@ -81,7 +85,7 @@ fn template() -> Result<Template> {
         &Path::new(security::STATE).join("template.npz"),
     )?)
 }
-fn verify(user: &str) -> Result<bool> {
+fn verify(user: &str, diagnostic: bool) -> Result<bool> {
     security::root()?;
     let config = security::config()?;
     security::verify_account(user, &config)?;
@@ -96,11 +100,21 @@ fn verify(user: &str) -> Result<bool> {
             .as_slice()
             .ok_or_else(|| anyhow::anyhow!("Noncontiguous template"))?;
         let (drop, contrast) = image::quality(&pixels, background)?;
+        if diagnostic {
+            eprintln!("{}", serde_json::json!({"drop":drop,"contrast":contrast}));
+        }
         if drop < 900. || contrast < 40. {
             continue;
         }
         let probe = image::prepare(&pixels, background)?;
-        return Ok(matcher::match_set(&references, &probe)?.correlation >= matcher::THRESHOLD);
+        let result = matcher::match_set(&references, &probe)?;
+        if diagnostic {
+            eprintln!(
+                "{}",
+                serde_json::json!({"correlation":result.correlation,"threshold":matcher::THRESHOLD})
+            );
+        }
+        return Ok(result.correlation >= matcher::THRESHOLD);
     }
     Ok(false)
 }
@@ -164,11 +178,16 @@ fn evaluate() -> Result<serde_json::Value> {
 }
 fn run(command: Commands) -> Result<()> {
     match command {
-        Commands::Verify { user } => {
-            let result = match verify(&user) {
+        Commands::Verify { user, diagnostic } => {
+            let result = match verify(&user, diagnostic) {
                 Ok(true) => 0,
                 Ok(false) => 1,
-                Err(_) => 2,
+                Err(error) => {
+                    if diagnostic {
+                        eprintln!("{error:#}");
+                    }
+                    2
+                }
             };
             std::process::exit(result)
         }

@@ -31,6 +31,9 @@ The Rust backend completed an encrypted live capture in approximately 1.9 second
 passed the original component's integrity checks and decoded 5120 pixels.
 The pinned guest readiness check passed. An isolated Rust PAM check rejected an
 empty sensor within the configured deadline.
+The Rust executable also accepted a fresh enrolled-finger capture at `0.861181`
+with the existing `0.86` threshold. An enrolled-finger Rust PAM check remains
+the next live qualification step before activating the replacement library.
 
 The final Rust matcher was exercised against the existing private template and
 all 12 independent v3 captures. All six enrolled-finger captures were accepted;

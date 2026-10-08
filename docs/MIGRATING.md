@@ -27,6 +27,10 @@ sudo /usr/local/lib/gxfp51b7/gxfp51b7 verify YOUR_ACCOUNT
 `verify` returns 0 for a matching finger, 1 for a completed rejection and 2 for
 an unavailable backend or incompatible enrollment. Check an empty sensor, the
 enrolled finger and different fingers while maintaining the current template.
+For local diagnosis, `verify YOUR_ACCOUNT --diagnostic` writes capture quality,
+matching correlation and backend error context to standard error. A normal
+verification keeps those details private. Each live check uses a fresh press;
+keep the enrolled finger in contact until that check finishes.
 
 Place the new PAM library in a separate root-owned staging directory. Create a
 separate PAM test service pointing to that staged library and the explicit

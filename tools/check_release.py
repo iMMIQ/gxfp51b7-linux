@@ -29,7 +29,7 @@ def main():
             continue
         seen.add(name)
         if (path.is_symlink() or path.suffix.lower() in FORBIDDEN or
-                any(part in ('private', 'work', 'assets', 'outputs') for part in path.parts) or
+                any(part in ('private', 'work', 'assets', 'outputs') for part in Path(name).parts) or
                 path.name.startswith('id_ed25519') or path.name == 'known_hosts'):
             problems.append(name + ': private/binary path')
             continue
