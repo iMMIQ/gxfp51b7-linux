@@ -1,10 +1,10 @@
 # GXFP51B7 Linux
 
-[简体中文](README.zh-CN.md) · [Installation](docs/INSTALL.md) · [Design](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md)
+[简体中文](README.zh-CN.md) · [Installation](docs/INSTALL.md) · [fprintd setup](docs/FPRINTD.md) · [Design](docs/ARCHITECTURE.md) · [Validation](docs/VALIDATION.md)
 
 Rust implementation of Linux fingerprint acquisition and SDDM authentication for the **Huawei MACHC-WAX9** with ACPI device **GXFP51B7**.
 
-The project provides an encrypted capture backend, fingerprint matcher and PAM module for SDDM login. Host operation uses a compiled Rust executable and Rust PAM library.
+The project provides a Rust encrypted capture backend and a ChicagoHS matcher connected to libfprint TOD and fprintd. Standard `pam_fprintd` supplies SDDM authentication. A Rust affine matcher and PAM module provide the existing deployment path and offline comparison.
 
 ## Supported configuration
 
@@ -27,20 +27,22 @@ The communication key stays in the vendor enclave. Enrollment templates reside i
 
 ## Build and test
 
-Install Rust 1.88 or newer, a C compiler, PAM development headers and Python 3.11 or newer for offline tooling, then:
+Install Rust 1.88 or newer, a C compiler, GLib/GIO, OpenCV 4 or 5, libclang, pkg-config, PAM development headers and Python 3.11 or newer for offline tooling, then:
 
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r requirements-tools.txt
 make check PYTHON=python
+# With libfprint TOD development headers:
+make fprint
 ```
 
 These offline checks cover source compilation, packet parsing, image decoding, matching mathematics and PAM configuration generation. The guest loader and host kernel helper are separate build targets; see the [installation guide](docs/INSTALL.md).
 
 ## Installation and use
 
-Installation combines this repository’s source with user-supplied vendor components, a prepared SGX guest and an SSH identity unique to that guest. The [guide](docs/INSTALL.md) documents preparation, host installation, enrollment, live validation, SDDM enablement and rollback. The installation workflow targets the MACHC-WAX9 and uses locally prepared assets.
+Installation combines this repository’s source with user-supplied vendor components, a prepared SGX guest and an SSH identity unique to that guest. The [guide](docs/INSTALL.md) documents preparation, host installation, enrollment, live validation, SDDM enablement and rollback. The installation workflow targets the MACHC-WAX9 and uses locally prepared assets. The [fprintd guide](docs/FPRINTD.md) covers ChicagoHS enrollment and standard login integration.
 
 After enrollment and successful live validation, select the enrolled account in SDDM, submit an empty password and touch the enrolled index finger. A mismatch, unavailable backend or timeout falls through to password authentication. Some SDDM themes may require a separate UI adjustment; the tested eos-breeze theme accepts an empty password submission.
 
@@ -48,7 +50,9 @@ After enrollment and successful live validation, select the enrolled account in 
 
 ```text
 crates/core/    decoder, image processing, affine matcher and NPZ templates
+crates/backends/ ChicagoHS wrapper and pinned algorithm; OpenCV RootSIFT comparator
 crates/driver/  Rust CLI, transport, enrollment, installer and VM management
+fprint/         libfprint TOD adapter and public API probe
 crates/pam/     Rust PAM authentication module
 pam/           explicit C authentication probes
 kernel/        read-only BIOS-container helper and DKMS configuration

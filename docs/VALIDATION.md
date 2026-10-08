@@ -46,3 +46,37 @@ The public enrollment command collects **15 new separate presses**. The original
 Offline tests cover packet checksums and malformed lengths, image nibble order/column layout/padding, bounded translation and deformation, blank/nonfinite images, unrelated synthetic texture, and PAM block insertion/removal with account-name injection and unsupported-layout rejection. Synthetic matcher tests detect mathematical regressions. Biometric security validation uses independent captures and participant controls.
 
 CI builds the Rust workspace and C probes, checks formatting/Clippy, and runs Rust unit tests, Python reference tests and synthetic cross-language comparisons. Kernel and guest compilation are separate local checks. CI operates on source, synthetic fixtures and generated configuration text.
+
+## ChicagoHS and standard integration — 2026-10-08
+
+The comparison used the same 12 original enrollment presses for every backend,
+the same background and the 12 independent probes listed above. Chicago's
+position policy accepted eight stages from those old presses. The incomplete
+offline gallery is comparison evidence; the live fprintd gallery was created
+through a new, complete 12-stage enrollment.
+
+| Backend | Same-finger evidence | Different-finger evidence | Mean scoring time |
+| --- | --- | --- | --- |
+| Affine NCC, 12 references | 6/6 accepted; 0.891410–0.922151 | 0/6 accepted; 0.382780–0.756304 | 2.337408 s |
+| ChicagoHS, selector 207 | 6/6 accepted; scores 16–67 | 0/6 accepted; all scores −4 | 0.031864 s |
+| OpenCV RootSIFT comparator | Correspondences in 4/6 probes; fused inliers 0–18 | Zero fused inliers in 6/6 probes | 0.008361 s |
+
+RootSIFT provides numeric evidence with a separately calibrated policy still
+required for authentication. The selected live matcher is ChicagoHS. The timing
+measures matching on saved captures and excludes device acquisition and guest
+startup. The sample set is one participant on one machine.
+
+The actual libfprint TOD adapter registered the EC sensor with official fprintd.
+A new guided enrollment completed 12 accepted stages and persisted a private
+right-index-finger print. Live fprintd verification accepted a fresh enrolled
+finger and rejected a different finger. Empty-sensor verification ended with
+an unavailable result. Cancellation released the device, left no worker process
+and allowed the client to enumerate the enrollment immediately afterward.
+
+After installing the persistent systemd and D-Bus activation configuration,
+automatic daemon activation succeeded. An isolated standard `pam_fprintd`
+authentication and `pam_unix` account check returned `PAM_SUCCESS` (0). Its
+empty-sensor counterpart returned `PAM_AUTHINFO_UNAVAIL` (9). The service uses
+its normal filesystem hardening with explicit ACPI doorbell and loopback access.
+The previous SDDM configuration and daemon files are saved in private recovery
+storage. Full desktop session startup remains a separate user login check.

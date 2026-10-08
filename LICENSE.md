@@ -1,6 +1,6 @@
 # License scope
 
-Except for the separately identified kernel helper, this project's original
+This project's original
 code is licensed under the **GNU Lesser General Public License, version 3 or
 any later version**, SPDX `LGPL-3.0-or-later`.
 
@@ -20,6 +20,11 @@ Documentation and project-authored build/configuration files follow
 LGPL-3.0-or-later unless otherwise marked. The authoritative expression for an
 individually marked file is its SPDX notice. External dependencies and vendor
 components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+The vendored ChicagoHS algorithm and tests under `crates/backends/native/chicago`,
+`common` and `tests` retain **LGPL-2.1-or-later** and their original copyright notices.
+Their complete license is in [crates/backends/native/COPYING.LESSER](crates/backends/native/COPYING.LESSER).
+The Rust wrapper, bridge and libfprint adapter are project-authored LGPL-3.0-or-later code.
 
 The licensing grant covers the project-authored source and documentation.
 Vendor enclaves, driver DLLs, sensor configuration, firmware and dependencies

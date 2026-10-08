@@ -9,9 +9,10 @@ flowchart LR
   H <-->|loopback SSH, binary RPC| G[Same-machine KVM guest]
   G --> E[Original signed Intel / Goodix enclaves]
   H -->|CRC-validated source| D[80 × 64 decoder]
-  D --> M[Bounded affine NCC comparison]
+  D --> M[ChicagoHS comparison]
   T[Root-private template] --> M
-  M --> P[15-second PAM helper]
+  M --> F[libfprint TOD / fprintd]
+  F --> P[Standard pam_fprintd]
   P --> L[SDDM / password fallback]
 ```
 
@@ -32,7 +33,7 @@ TLS uses the observed TLS 1.2 `PSK-AES128-CBC-SHA256` suite. The host forwards r
 
 The guest RPC header is three little-endian 32-bit words: magic `0x43505247`, operation and length/status. The bridge bounds record sizes, observes the handshake completion status and accepts the source only after the original component's CRC success and expected final plaintext length. Large mailbox records must be stable for 30 ms before being consumed.
 
-## Image and frozen comparison
+## Image and affine comparison
 
 The CRC-validated plaintext has length 10573 bytes; exported source is 10560 bytes. Image source is 80 column slots of 132 bytes: 96 bytes of packed 12-bit pixels plus 36 zero-padding bytes. Four pixels occupy six bytes. The decoder validates zero padding and produces 5120 row-major pixels. A separate tightly packed 7680-byte representation is supported for offline analysis only.
 
@@ -52,7 +53,8 @@ The trusted computing base includes host root, the administrator-provided guest 
 
 ## Rust components and library boundaries
 
-The Cargo workspace has three packages. `gxfp-core` handles decoding, image
+The Cargo workspace has four packages. `gxfp-backends` wraps the pinned native
+ChicagoHS matcher and provides an OpenCV RootSIFT research comparator. `gxfp-core` handles decoding, image
 preparation, matching and template I/O. `gxfp51b7` provides device transport,
 account checks, enrollment, commissioning, installation and VM lifecycle commands.
 `pam-gxfp51b7` builds a `cdylib` with Linux-PAM entrypoints through `pam-bindings`.
@@ -82,3 +84,26 @@ PE parsing and cryptographic libraries to prepare vendor assets offline.
 The PAM library waits through a Linux process descriptor using `rustix` and `nix`
 polling. Its wait state belongs to each authentication invocation, allowing PAM
 to unload the module while the client retains its own signal handling.
+
+## ChicagoHS and fprintd
+
+ChicagoHS uses the upstream I/O-free calibration, preprocessing, feature,
+enrollment and type-24 matching implementation. The source is pinned and its
+vendor-file hashes are checked before native tests. The Rust wrapper owns each
+native context on one thread, validates dimensions and bounds print buffers.
+The verification rule is the upstream selector 207 and score greater than zero.
+Verification evaluates a single quality-accepted capture. Gallery updates take
+place during explicit enrollment; login keeps the enrolled gallery fixed.
+
+The small C TOD adapter implements libfprint's device API. Rust owns account
+validation, acquisition, quality gates, finger-off calibration and guided
+12-position enrollment. Only typed progress events and a bounded private print
+travel through inherited pipes. libfprint supplies print serialization; fprintd
+supplies storage, D-Bus arbitration and standard PAM integration. Cancellation
+terminates the worker's process group. The adapter bounds verification to 30
+seconds and enrollment to 660 seconds, including cleanup allowance.
+
+The EC mailbox is exposed through a fixed discovery environment value because
+libfprint's native udev discovery targets USB, spidev and hidraw devices. The
+value selects `/dev/goodix_bios_sealed`; the Rust transport validates the actual
+ACPI device and machine resources on every capture. See [setup](FPRINTD.md).
